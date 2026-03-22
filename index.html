@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ימית — חיפוש מלאי</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0c0c0c; --surf:#161616; --surf2:#202020; --bdr:#2c2c2c;
+  --acc:#00d4aa; --acc-dim:rgba(0,212,170,.12); --acc-mid:rgba(0,212,170,.35);
+  --red:#ff5555; --red-dim:rgba(255,85,85,.12);
+  --ylw:#ffcc00; --txt:#efefef; --mut:#777; --fnt:#3a3a3a;
+  --mono:'JetBrains Mono',monospace; --sans:'Heebo',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow-x:hidden}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans)}
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--bdr);position:sticky;top:0;background:var(--bg);z-index:50}
+.logo{font-size:20px;font-weight:900}.logo span{color:var(--acc)}
+.hdr-r{display:flex;gap:8px;align-items:center}
+.badge{font-family:var(--mono);font-size:11px;color:var(--mut);background:var(--surf);border:1px solid var(--bdr);border-radius:6px;padding:4px 9px}
+.badge.on{color:var(--acc);border-color:var(--acc-mid)}
+.ibtn{background:var(--surf);border:1px solid var(--bdr);color:var(--mut);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
+.scr{display:none}.scr.show{display:block}
+.upwrap{max-width:480px;margin:0 auto;padding:32px 16px 80px}
+.upwrap h2{font-size:24px;font-weight:900;margin-bottom:6px}
+.upwrap p{color:var(--mut);font-size:14px;margin-bottom:28px;line-height:1.5}
+.dz{border:2px dashed var(--bdr);border-radius:14px;padding:36px 20px;text-align:center;background:var(--surf);position:relative;cursor:pointer;transition:.15s}
+.dz:hover,.dz.ov{border-color:var(--acc);background:var(--acc-dim)}
+.dz input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.dz-ico{font-size:36px;margin-bottom:10px}
+.dz-t{font-size:16px;font-weight:700;margin-bottom:4px}
+.dz-s{font-size:13px;color:var(--mut)}
+.flist{margin-top:16px;display:flex;flex-direction:column;gap:8px}
+.fi{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.fi.ok{border-color:var(--acc-mid)}.fi.err{border-color:var(--red)}
+.fi-n{font-weight:600;margin-bottom:2px}.fi-m{font-size:11px;color:var(--mut)}
+.fi-s{font-family:var(--mono);font-size:12px}.fi-s.ok{color:var(--acc)}.fi-s.err{color:var(--red)}
+.dbg{font-size:11px;color:#555;margin-top:8px;font-family:monospace;white-space:pre-wrap;line-height:1.5}
+.btn{width:100%;padding:15px;background:var(--acc);color:#000;border:none;border-radius:12px;font-size:16px;font-weight:700;font-family:var(--sans);cursor:pointer;margin-top:18px;transition:.15s}
+.btn:active{background:#00f0c0}.btn:disabled{opacity:.4;cursor:not-allowed}
+.ov-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:100;align-items:flex-end;justify-content:center}
+.ov-wrap.show{display:flex}
+.modal{background:var(--surf);border:1px solid var(--bdr);border-radius:18px 18px 0 0;padding:24px 20px 40px;width:100%;max-width:480px}
+.mhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.mhdr h3{font-size:17px;font-weight:700}
+.mclose{background:none;border:none;color:var(--mut);font-size:20px;cursor:pointer;padding:4px}
+.lbl{display:block;font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
+.inp{width:100%;background:var(--bg);border:1px solid var(--bdr);border-radius:9px;padding:11px 13px;color:var(--txt);font-family:var(--mono);font-size:13px;direction:ltr;text-align:left}
+.inp:focus{outline:none;border-color:var(--acc)}
+.hint{font-size:11px;color:var(--fnt);margin-top:5px}
+.swrap{padding:14px 14px 100px}
+.srow{display:flex;gap:8px;margin-bottom:16px}
+.si{flex:1;background:var(--surf);border:1.5px solid var(--bdr);border-radius:13px;padding:15px 16px;color:var(--txt);font-family:var(--sans);font-size:16px;font-weight:500;-webkit-appearance:none}
+.si:focus{outline:none;border-color:var(--acc);background:var(--surf2)}
+.si::placeholder{color:var(--fnt);font-weight:400}
+.sbtn{width:52px;background:var(--acc);color:#000;border:none;border-radius:13px;font-size:20px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.sbtn:active{background:#00f0c0}.sbtn:disabled{opacity:.5}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px}
+.chip{background:var(--surf);border:1px solid var(--bdr);border-radius:18px;padding:6px 13px;font-size:12px;color:var(--mut);cursor:pointer}
+.chip:active{border-color:var(--acc);color:var(--acc)}
+.stl{font-family:var(--mono);font-size:11px;color:var(--mut);margin-bottom:10px;letter-spacing:.5px;text-transform:uppercase}
+.rlist{display:flex;flex-direction:column;gap:9px}
+.card{background:var(--surf);border:1px solid var(--bdr);border-right:3px solid var(--fnt);border-radius:13px;padding:14px;cursor:pointer}
+.card.y{border-right-color:var(--acc)}.card.n{border-right-color:var(--fnt);opacity:.65}
+.ctop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:9px}
+.cname{font-size:14px;font-weight:700;line-height:1.35;flex:1}
+.pill{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;white-space:nowrap;flex-shrink:0}
+.pill.y{background:var(--acc-dim);color:var(--acc);border:1px solid var(--acc-mid)}
+.pill.n{background:var(--red-dim);color:var(--red);border:1px solid var(--red)}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+.tag{font-size:11px;color:var(--mut);background:var(--bg);border:1px solid var(--bdr);border-radius:5px;padding:2px 7px;font-family:var(--mono)}
+.cfoot{display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid var(--bdr)}
+.reason{font-size:11px;color:var(--mut);font-style:italic;flex:1}
+.price{font-size:17px;font-weight:900;font-family:var(--mono)}
+.price.loading{font-size:11px;font-weight:400;color:var(--fnt)}
+.price.found{color:var(--acc)}
+.slink{display:block;font-size:11px;color:var(--acc);text-decoration:none;margin-top:5px}
+.empty{text-align:center;padding:48px 20px}
+.empty .ico{font-size:38px;margin-bottom:12px}
+.empty h3{font-size:17px;font-weight:700;margin-bottom:7px}
+.empty p{font-size:13px;color:var(--mut);line-height:1.6}
+.sk{background:var(--surf);border:1px solid var(--bdr);border-radius:13px;padding:14px}
+.skb{background:var(--surf2);border-radius:4px;margin-bottom:8px}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+.sk{animation:pulse 1.3s infinite}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">ימית<span>.</span></div>
+  <div class="hdr-r">
+    <div class="badge" id="badge">אין מלאי</div>
+    <button class="ibtn" onclick="openSettings()">⚙</button>
+    <button class="ibtn" onclick="goUpload()">↑</button>
+  </div>
+</div>
+
+<div class="ov-wrap" id="settingsOv">
+  <div class="modal">
+    <div class="mhdr"><h3>הגדרות</h3><button class="mclose" onclick="closeSettings()">✕</button></div>
+    <label class="lbl">מפתח Claude API</label>
+    <input class="inp" id="apiKey" type="password" placeholder="sk-ant-api03-..." dir="ltr">
+    <div class="hint">נשמר מקומית · השג ב-platform.anthropic.com → API Keys</div>
+    <button class="btn" onclick="saveSettings()" style="margin-top:20px">שמור</button>
+  </div>
+</div>
+
+<div class="scr show" id="scrUpload">
+  <div class="upwrap">
+    <h2>טעינת מלאי</h2>
+    <p>בחר קבצי CSV (ייצוא מ-Excel). ניתן לבחור מספר קבצים בבת אחת.</p>
+    <div class="dz" id="dz">
+      <input type="file" id="fi" accept=".csv" multiple>
+      <div class="dz-ico">📂</div>
+      <div class="dz-t">בחר קבצי CSV</div>
+      <div class="dz-s">KITE, WINDSURF, WING, KAYAKS...</div>
+    </div>
+    <div class="flist" id="flist"></div>
+    <div class="dbg" id="dbg"></div>
+    <button class="btn" id="loadBtn" disabled onclick="doLoad()">טען מלאי</button>
+  </div>
+</div>
+
+<div class="scr" id="scrSearch">
+  <div class="swrap">
+    <div class="srow">
+      <input class="si" id="si" type="search"
+        placeholder='לדוגמה: "EVO 10" או "ריבל 9 כחול" או "kayak"'
+        autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="sbtn" id="sbtn" onclick="doSearch()">🔍</button>
+    </div>
+    <div class="chips">
+      <div class="chip" onclick="fill('EVO 10')">EVO 10</div>
+      <div class="chip" onclick="fill('ריבל 9 כחול')">ריבל 9 כחול</div>
+      <div class="chip" onclick="fill('NEO SLS 12')">NEO SLS 12</div>
+      <div class="chip" onclick="fill('גלשן 138')">גלשן 138</div>
+      <div class="chip" onclick="fill('kayak')">קיאק</div>
+      <div class="chip" onclick="fill('wing foil')">ווינג פויל</div>
+    </div>
+    <div class="stl" id="stl"></div>
+    <div class="rlist" id="rlist"></div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let INV = [];
+let RES = [];
+const PC = {};
+
+// ── PARSER ──
+function parseCSV(text, fn) {
+  const items = [];
+  const raw = text.replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const lines = raw.split('\n');
+  let cat = catFromFn(fn);
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const cols = csvSplit(line);
+    if (cols.length < 4) continue;
+
+    const sku  = trim(cols[2]);
+    const name = trim(cols[3]);
+    const cat4 = trim(cols[4]||'');
+    const qstr = trim(cols[6]||'');
+
+    if (name.includes('***')) {
+      const c = name.replace(/\*/g,'').trim();
+      if (c.length > 1) cat = c;
+      continue;
+    }
+    if (!name || name.length < 2 || name === 'שם פריט') continue;
+
+    const qty = parseFloat(qstr) || 0;
+    items.push({name, sku, cat4, cat, qty, inStock: qty > 0, fn});
+  }
+  return items;
+}
+
+function csvSplit(line) {
+  const cols=[]; let cur=''; let q=false;
+  for (let i=0;i<line.length;i++) {
+    const c=line[i];
+    if (c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q;}
+    else if(c===','&&!q){cols.push(cur);cur='';}
+    else cur+=c;
+  }
+  cols.push(cur); return cols;
+}
+
+function trim(s){return(s||'').trim().replace(/^\*+/,'');}
+
+function catFromFn(f){
+  f=f.toLowerCase();
+  if(f.includes('kite'))   return 'קייט';
+  if(f.includes('wind'))   return 'גלישת רוח';
+  if(f.includes('wing'))   return 'ווינג';
+  if(f.includes('kayak'))  return 'קיאק';
+  if(f.includes('sup'))    return 'סאפ';
+  if(f.includes('wet'))    return 'חליפות';
+  return 'כללי';
+}
+
+// ── UPLOAD ──
+let pending = [];
+
+document.getElementById('fi').addEventListener('change', e => {
+  pending = Array.from(e.target.files);
+  showPending();
+});
+
+const dzEl = document.getElementById('dz');
+dzEl.addEventListener('dragover', e=>{e.preventDefault();dzEl.classList.add('ov');});
+dzEl.addEventListener('dragleave',()=>dzEl.classList.remove('ov'));
+dzEl.addEventListener('drop', e=>{
+  e.preventDefault(); dzEl.classList.remove('ov');
+  pending = Array.from(e.dataTransfer.files).filter(f=>f.name.endsWith('.csv'));
+  showPending();
+});
+
+function showPending(){
+  document.getElementById('flist').innerHTML = pending.map(f=>`
+    <div class="fi">
+      <div><div class="fi-n">${esc(f.name)}</div><div class="fi-m">ממתין...</div></div>
+      <div class="fi-s">⏳</div>
+    </div>`).join('');
+  document.getElementById('loadBtn').disabled = !pending.length;
+  document.getElementById('dbg').textContent = '';
+}
+
+async function doLoad(){
+  if (!pending.length) return;
+  const btn = document.getElementById('loadBtn');
+  const dbg = document.getElementById('dbg');
+  btn.disabled = true;
+  btn.textContent = 'קורא קבצים...';
+  INV = [];
+
+  const sums = [];
+  for (const f of pending){
+    try {
+      const text = await readF(f);
+      dbg.textContent += `${f.name}: ${text.length} תווים\n`;
+      const parsed = parseCSV(text, f.name);
+      const ns = parsed.filter(i=>i.inStock).length;
+      INV.push(...parsed);
+      sums.push({name:f.name, count:parsed.length, ns, ok:true});
+      dbg.textContent += `  → ${parsed.length} פריטים, ${ns} במלאי\n`;
+    } catch(e){
+      sums.push({name:f.name, count:0, ok:false, err:e.message});
+      dbg.textContent += `  ✗ ${e.message}\n`;
+    }
+  }
+
+  try { localStorage.setItem('yamit_inv', JSON.stringify(INV)); } catch(e){}
+
+  document.getElementById('flist').innerHTML = sums.map(s=>`
+    <div class="fi ${s.ok?'ok':'err'}">
+      <div>
+        <div class="fi-n">${esc(s.name)}</div>
+        <div class="fi-m">${s.ok?`${s.count} פריטים · ${s.ns} במלאי`:s.err}</div>
+      </div>
+      <div class="fi-s ${s.ok?'ok':'err'}">${s.ok?'✓':'✗'}</div>
+    </div>`).join('');
+
+  if (INV.length > 0){
+    btn.textContent = `✓ נטענו ${INV.length} פריטים`;
+    setBadge();
+    setTimeout(goSearch, 700);
+  } else {
+    btn.textContent = 'שגיאה — ראה פרטים';
+    btn.disabled = false;
+  }
+}
+
+function readF(file){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = () => rej(new Error('שגיאת קריאה'));
+    r.readAsText(file,'UTF-8');
+  });
+}
+
+// ── SETTINGS ──
+function openSettings(){
+  document.getElementById('apiKey').value = localStorage.getItem('yamit_key')||'';
+  document.getElementById('settingsOv').classList.add('show');
+}
+function closeSettings(){ document.getElementById('settingsOv').classList.remove('show'); }
+function saveSettings(){
+  const k = document.getElementById('apiKey').value.trim();
+  if(k) localStorage.setItem('yamit_key',k);
+  closeSettings();
+}
+document.getElementById('settingsOv').addEventListener('click', e=>{
+  if(e.target===e.currentTarget) closeSettings();
+});
+
+// ── NAV ──
+function goUpload(){
+  document.getElementById('scrUpload').classList.add('show');
+  document.getElementById('scrSearch').classList.remove('show');
+}
+function goSearch(){
+  document.getElementById('scrUpload').classList.remove('show');
+  document.getElementById('scrSearch').classList.add('show');
+  document.getElementById('si').focus();
+}
+function setBadge(){
+  const ns = INV.filter(i=>i.inStock).length;
+  const b = document.getElementById('badge');
+  b.textContent = INV.length ? `${ns}/${INV.length}` : 'אין מלאי';
+  b.className = 'badge' + (INV.length?' on':'');
+}
+
+// ── PRE-FILTER ──
+const TR={'איבו':'evo','evo':'איבו','ריבל':'rebel','rebel':'ריבל','נאו':'neo','neo':'נאו','דייס':'dice','dice':'דייס','גונזלס':'gonzales','gonzales':'גונזלס','ואם':'wam','wam':'ואם'};
+const NM={'אחד':'1','שתיים':'2','שלוש':'3','ארבע':'4','חמש':'5','שש':'6','שבע':'7','שמונה':'8','תשע':'9','עשר':'10','עשרה':'10','אחד עשר':'11','שתים עשרה':'12','שלוש עשרה':'13'};
+
+function preFilter(q){
+  if (!INV.length) return [];
+  const toks = q.toLowerCase().split(/\s+/).map(t=>NM[t]||TR[t]||t);
+  const scored = INV.map(item=>{
+    const hay = (item.name+' '+item.cat+' '+item.sku).toLowerCase();
+    let sc=0;
+    for(const t of toks){
+      if(hay.includes(t)) sc+=2;
+      else if(t.length>=3 && hay.split(/\s+/).some(w=>w.startsWith(t))) sc+=1;
+    }
+    return {item,sc};
+  });
+  return scored.filter(s=>s.sc>0).sort((a,b)=>b.sc-a.sc).slice(0,80).map(s=>s.item);
+}
+
+// ── SEARCH ──
+document.getElementById('si').addEventListener('keydown', e=>{if(e.key==='Enter') doSearch();});
+function fill(t){ document.getElementById('si').value=t; doSearch(); }
+
+async function doSearch(){
+  const q = document.getElementById('si').value.trim();
+  if (!q) return;
+  const key = localStorage.getItem('yamit_key');
+  const rl  = document.getElementById('rlist');
+  const stl = document.getElementById('stl');
+
+  if (!key){
+    rl.innerHTML = emptyS('🔑','נדרש מפתח API','פתח הגדרות ⚙ והזן מפתח Claude API'); return;
+  }
+  if (!INV.length){
+    rl.innerHTML = emptyS('📦','אין מלאי','לחץ ↑ לטעינת קבצי CSV'); return;
+  }
+
+  document.getElementById('sbtn').disabled = true;
+  stl.textContent = 'מסנן מועמדים...';
+  rl.innerHTML = skels(4);
+
+  try {
+    const cands = preFilter(q);
+    stl.textContent = `${cands.length} מועמדים → Claude...`;
+
+    if (!cands.length){
+      rl.innerHTML = emptyS('🤔','לא נמצא','נסה מונח אחר');
+      stl.textContent=''; return;
+    }
+
+    RES = await askClaude(q, cands);
+    if (!RES.length){
+      rl.innerHTML = emptyS('🤷','אין תוצאות','נסה: EVO 10, ריבל 9, kayak');
+      stl.textContent=''; return;
+    }
+
+    stl.textContent = `${RES.length} תוצאות`;
+    rl.innerHTML = RES.map((r,i)=>cardH(r,i)).join('');
+    RES.forEach((_,i)=>loadPx(i));
+
+  } catch(e){
+    rl.innerHTML = emptyS('⚠️','שגיאה',esc(e.message));
+    stl.textContent='';
+  }
+  document.getElementById('sbtn').disabled = false;
+}
+
+// ── CLAUDE ──
+async function askClaude(q, cands){
+  const key = localStorage.getItem('yamit_key');
+  const list = cands.map((x,i)=>`${i}|${x.inStock?'✓'+x.qty:'✗'}|${x.name}|${x.cat}|${x.sku}`).join('\n');
+
+  const sys=`You are an inventory search assistant for an Israeli water sports store.
+Match the query to items. Return ONLY a JSON array, no other text.
+Each element: {"idx":<number>,"score":<0.0-1.0>,"reason":"<brief Hebrew>"}
+Max 8 results. Min score 0.4. Prefer in-stock (✓).
+
+Domain knowledge:
+EVO=איבו, REBEL=ריבל, NEO=נאו, DICE=דייס, GONZALES=גונזלס
+Kite sizes in meters: 7,8,9,10,11,12,13
+Board sizes cm: 132,133,135,136,138,139,141,142
+Board sizes ft: 4'11,5'1,5'3,5'5...
+Hebrew numbers: עשר=10, תשע=9, שתים עשרה=12
+Colors: כחול=blue, אדום=red, ורוד=pink, לבן=white, אפור=gray, כתום=orange, ירוק=green
+SLS=performance, D/LAB=premium line`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-haiku-4-5-20251001',
+      max_tokens:800,
+      system:sys,
+      messages:[{role:'user',content:`Query: "${q}"\n\nItems:\n${list}`}]
+    })
+  });
+
+  if (!resp.ok){
+    const e=await resp.json().catch(()=>({}));
+    throw new Error(e.error?.message||`HTTP ${resp.status}`);
+  }
+
+  const data = await resp.json();
+  const txt = (data.content?.[0]?.text||'[]').replace(/```json|```/g,'').trim();
+  const matches = JSON.parse(txt);
+
+  return matches
+    .filter(m=>m.score>=0.4 && cands[m.idx])
+    .sort((a,b)=>b.score-a.score)
+    .map(m=>({item:cands[m.idx], score:m.score, reason:m.reason}));
+}
+
+// ── PRICE ──
+async function loadPx(i){
+  const r=RES[i]; if(!r) return;
+  const pEl=document.getElementById(`p${i}`);
+  const lEl=document.getElementById(`l${i}`);
+  if(!pEl) return;
+  const ck=r.item.sku||r.item.name;
+  if(PC[ck]){applyPx(i,PC[ck]);return;}
+
+  const eng=(r.item.name.match(/[A-Z][A-Z0-9\s\/\'\-]{2,}/g)||[]).slice(0,2).join(' ').trim().substring(0,35);
+  const url=`https://yamitysb.co.il/?s=${encodeURIComponent(eng||r.item.name.substring(0,30))}&post_type=product`;
+  try{
+    const res=await fetch(url,{signal:AbortSignal.timeout(6000)});
+    if(!res.ok) throw new Error();
+    const html=await res.text();
+    const um=html.match(/href="(https:\/\/yamitysb\.co\.il\/product\/[^"]+)"/);
+    const pm=html.match(/₪\s*([\d,]+)/);
+    const live={url:um?.[1]||null, price:pm?parseInt(pm[1].replace(',',''))||null:null};
+    PC[ck]=live; applyPx(i,live);
+  }catch{
+    PC[ck]={url:null,price:null};
+    if(pEl){pEl.textContent='';pEl.className='price';}
+  }
+}
+
+function applyPx(i,live){
+  const pEl=document.getElementById(`p${i}`);
+  const lEl=document.getElementById(`l${i}`);
+  if(pEl){
+    if(live.price){pEl.textContent=`₪${live.price.toLocaleString()}`;pEl.className='price found';}
+    else{pEl.textContent='';pEl.className='price';}
+  }
+  if(lEl&&live.url) lEl.innerHTML=`<a class="slink" href="${esc(live.url)}" target="_blank">פתח באתר ↗</a>`;
+}
+
+// ── RENDER ──
+function cardH(r,i){
+  const {item,reason}=r;
+  const sc=item.inStock?'y':'n';
+  const pt=item.inStock?`במלאי ×${item.qty}`:'אזל';
+  return `<div class="card ${sc}" onclick="loadPx(${i})">
+    <div class="ctop">
+      <div class="cname">${esc(item.name)}</div>
+      <div class="pill ${sc}">${pt}</div>
+    </div>
+    <div class="tags">
+      <span class="tag">${esc(item.cat)}</span>
+      ${item.sku?`<span class="tag">${esc(item.sku)}</span>`:''}
+      ${item.cat4?`<span class="tag">${esc(item.cat4)}</span>`:''}
+    </div>
+    <div class="cfoot">
+      <div>
+        <div class="reason">${esc(reason)}</div>
+        <div id="l${i}"></div>
+      </div>
+      <div class="price loading" id="p${i}">טוען...</div>
+    </div>
+  </div>`;
+}
+
+function skels(n){
+  return `<div class="rlist">${Array(n).fill(0).map(()=>`
+    <div class="sk">
+      <div class="skb" style="height:16px;width:65%"></div>
+      <div class="skb" style="height:11px;width:40%"></div>
+      <div class="skb" style="height:13px;width:50%;margin-top:10px"></div>
+    </div>`).join('')}</div>`;
+}
+
+function emptyS(ico,t,m){
+  return `<div class="empty"><div class="ico">${ico}</div><h3>${t}</h3><p>${m}</p></div>`;
+}
+
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── INIT ──
+(function(){
+  try{
+    const s=localStorage.getItem('yamit_inv');
+    if(s){INV=JSON.parse(s);if(INV.length){setBadge();goSearch();return;}}
+  }catch(e){INV=[];}
+  goUpload();
+})();
+</script>
+</body>
+</html>
