@@ -4,87 +4,105 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ימית — חיפוש מלאי</title>
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- No CDN dependencies — works on patchy store wifi -->
 <style>
+/* ── DESIGN TOKENS ── */
 :root {
-  --bg:#0c0c0c; --surf:#161616; --surf2:#202020; --bdr:#2c2c2c;
-  --acc:#00d4aa; --acc-dim:rgba(0,212,170,.12); --acc-mid:rgba(0,212,170,.35);
-  --red:#ff5555; --red-dim:rgba(255,85,85,.12);
-  --ylw:#ffcc00; --txt:#efefef; --mut:#777; --fnt:#3a3a3a;
-  --mono:'JetBrains Mono',monospace; --sans:'Heebo',sans-serif;
+  --bg:    #0c0c0c;
+  --surf:  #161616;
+  --surf2: #202020;
+  --bdr:   #2c2c2c;
+  --acc:   #00d4aa;
+  --acc-d: rgba(0,212,170,.12);
+  --acc-m: rgba(0,212,170,.35);
+  --red:   #ff5555;
+  --red-d: rgba(255,85,85,.12);
+  --txt:   #efefef;
+  --mut:   #777;
+  --dim:   #3a3a3a;
+  --mono:  'Courier New', monospace;
+  --sans:  -apple-system, 'Helvetica Neue', Arial, sans-serif;
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow-x:hidden}
-body{background:var(--bg);color:var(--txt);font-family:var(--sans)}
-.hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--bdr);position:sticky;top:0;background:var(--bg);z-index:50}
-.logo{font-size:20px;font-weight:900}.logo span{color:var(--acc)}
-.hdr-r{display:flex;gap:8px;align-items:center}
-.badge{font-family:var(--mono);font-size:11px;color:var(--mut);background:var(--surf);border:1px solid var(--bdr);border-radius:6px;padding:4px 9px}
-.badge.on{color:var(--acc);border-color:var(--acc-mid)}
-.ibtn{background:var(--surf);border:1px solid var(--bdr);color:var(--mut);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center}
-.scr{display:none}.scr.show{display:block}
-.upwrap{max-width:480px;margin:0 auto;padding:32px 16px 80px}
-.upwrap h2{font-size:24px;font-weight:900;margin-bottom:6px}
-.upwrap p{color:var(--mut);font-size:14px;margin-bottom:28px;line-height:1.5}
-.dz{border:2px dashed var(--bdr);border-radius:14px;padding:36px 20px;text-align:center;background:var(--surf);position:relative;cursor:pointer;transition:.15s}
-.dz:hover,.dz.ov{border-color:var(--acc);background:var(--acc-dim)}
-.dz input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
-.dz-ico{font-size:36px;margin-bottom:10px}
-.dz-t{font-size:16px;font-weight:700;margin-bottom:4px}
-.dz-s{font-size:13px;color:var(--mut)}
-.flist{margin-top:16px;display:flex;flex-direction:column;gap:8px}
-.fi{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
-.fi.ok{border-color:var(--acc-mid)}.fi.err{border-color:var(--red)}
-.fi-n{font-weight:600;margin-bottom:2px}.fi-m{font-size:11px;color:var(--mut)}
-.fi-s{font-family:var(--mono);font-size:12px}.fi-s.ok{color:var(--acc)}.fi-s.err{color:var(--red)}
-.dbg{font-size:11px;color:#555;margin-top:8px;font-family:monospace;white-space:pre-wrap;line-height:1.5}
-.btn{width:100%;padding:15px;background:var(--acc);color:#000;border:none;border-radius:12px;font-size:16px;font-weight:700;font-family:var(--sans);cursor:pointer;margin-top:18px;transition:.15s}
-.btn:active{background:#00f0c0}.btn:disabled{opacity:.4;cursor:not-allowed}
-.ov-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:100;align-items:flex-end;justify-content:center}
-.ov-wrap.show{display:flex}
-.modal{background:var(--surf);border:1px solid var(--bdr);border-radius:18px 18px 0 0;padding:24px 20px 40px;width:100%;max-width:480px}
-.mhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
-.mhdr h3{font-size:17px;font-weight:700}
-.mclose{background:none;border:none;color:var(--mut);font-size:20px;cursor:pointer;padding:4px}
-.lbl{display:block;font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px}
-.inp{width:100%;background:var(--bg);border:1px solid var(--bdr);border-radius:9px;padding:11px 13px;color:var(--txt);font-family:var(--mono);font-size:13px;direction:ltr;text-align:left}
-.inp:focus{outline:none;border-color:var(--acc)}
-.hint{font-size:11px;color:var(--fnt);margin-top:5px}
-.swrap{padding:14px 14px 100px}
-.srow{display:flex;gap:8px;margin-bottom:16px}
-.si{flex:1;background:var(--surf);border:1.5px solid var(--bdr);border-radius:13px;padding:15px 16px;color:var(--txt);font-family:var(--sans);font-size:16px;font-weight:500;-webkit-appearance:none}
-.si:focus{outline:none;border-color:var(--acc);background:var(--surf2)}
-.si::placeholder{color:var(--fnt);font-weight:400}
-.sbtn{width:52px;background:var(--acc);color:#000;border:none;border-radius:13px;font-size:20px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.sbtn:active{background:#00f0c0}.sbtn:disabled{opacity:.5}
-.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px}
-.chip{background:var(--surf);border:1px solid var(--bdr);border-radius:18px;padding:6px 13px;font-size:12px;color:var(--mut);cursor:pointer}
-.chip:active{border-color:var(--acc);color:var(--acc)}
-.stl{font-family:var(--mono);font-size:11px;color:var(--mut);margin-bottom:10px;letter-spacing:.5px;text-transform:uppercase}
-.rlist{display:flex;flex-direction:column;gap:9px}
-.card{background:var(--surf);border:1px solid var(--bdr);border-right:3px solid var(--fnt);border-radius:13px;padding:14px;cursor:pointer}
-.card.y{border-right-color:var(--acc)}.card.n{border-right-color:var(--fnt);opacity:.65}
-.ctop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:9px}
-.cname{font-size:14px;font-weight:700;line-height:1.35;flex:1}
-.pill{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;white-space:nowrap;flex-shrink:0}
-.pill.y{background:var(--acc-dim);color:var(--acc);border:1px solid var(--acc-mid)}
-.pill.n{background:var(--red-dim);color:var(--red);border:1px solid var(--red)}
-.tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
-.tag{font-size:11px;color:var(--mut);background:var(--bg);border:1px solid var(--bdr);border-radius:5px;padding:2px 7px;font-family:var(--mono)}
-.cfoot{display:flex;justify-content:space-between;align-items:center;padding-top:9px;border-top:1px solid var(--bdr)}
-.reason{font-size:11px;color:var(--mut);font-style:italic;flex:1}
-.price{font-size:17px;font-weight:900;font-family:var(--mono)}
-.price.loading{font-size:11px;font-weight:400;color:var(--fnt)}
-.price.found{color:var(--acc)}
-.slink{display:block;font-size:11px;color:var(--acc);text-decoration:none;margin-top:5px}
-.empty{text-align:center;padding:48px 20px}
-.empty .ico{font-size:38px;margin-bottom:12px}
-.empty h3{font-size:17px;font-weight:700;margin-bottom:7px}
-.empty p{font-size:13px;color:var(--mut);line-height:1.6}
-.sk{background:var(--surf);border:1px solid var(--bdr);border-radius:13px;padding:14px}
-.skb{background:var(--surf2);border-radius:4px;margin-bottom:8px}
-@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
-.sk{animation:pulse 1.3s infinite}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow-x: hidden; }
+body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+.hdr { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--bdr); position: sticky; top: 0; background: var(--bg); z-index: 50; }
+.logo { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
+.logo span { color: var(--acc); }
+.hdr-r { display: flex; gap: 8px; align-items: center; }
+.badge { font-family: var(--mono); font-size: 11px; color: var(--mut); background: var(--surf); border: 1px solid var(--bdr); border-radius: 6px; padding: 4px 9px; white-space: nowrap; }
+.badge.on { color: var(--acc); border-color: var(--acc-m); }
+.ibtn { background: var(--surf); border: 1px solid var(--bdr); color: var(--mut); width: 36px; height: 36px; border-radius: 8px; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ibtn:active { background: var(--surf2); }
+.scr { display: none; }
+.scr.show { display: block; }
+.ov-wrap { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 100; align-items: flex-end; justify-content: center; }
+.ov-wrap.show { display: flex; }
+.modal { background: var(--surf); border: 1px solid var(--bdr); border-radius: 18px 18px 0 0; padding: 24px 20px 40px; width: 100%; max-width: 480px; }
+.mhdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.mhdr h3 { font-size: 17px; font-weight: 700; }
+.mclose { background: none; border: none; color: var(--mut); font-size: 20px; cursor: pointer; padding: 4px; }
+.lbl { display: block; font-size: 11px; font-weight: 700; color: var(--mut); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 7px; }
+.inp { width: 100%; background: var(--bg); border: 1px solid var(--bdr); border-radius: 9px; padding: 11px 13px; color: var(--txt); font-family: var(--mono); font-size: 13px; direction: ltr; text-align: left; }
+.inp:focus { outline: none; border-color: var(--acc); }
+.hint { font-size: 11px; color: var(--dim); margin-top: 5px; }
+.upwrap { max-width: 480px; margin: 0 auto; padding: 32px 16px 80px; }
+.upwrap h2 { font-size: 24px; font-weight: 900; margin-bottom: 6px; }
+.upwrap p { color: var(--mut); font-size: 14px; margin-bottom: 28px; line-height: 1.5; }
+.dz { border: 2px dashed var(--bdr); border-radius: 14px; padding: 36px 20px; text-align: center; background: var(--surf); position: relative; cursor: pointer; transition: border-color .15s, background .15s; }
+.dz:hover, .dz.ov { border-color: var(--acc); background: var(--acc-d); }
+.dz input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.dz-ico { font-size: 36px; margin-bottom: 10px; }
+.dz-t { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.dz-s { font-size: 13px; color: var(--mut); }
+.flist { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.fi { background: var(--surf); border: 1px solid var(--bdr); border-radius: 10px; padding: 11px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.fi.ok  { border-color: var(--acc-m); }
+.fi.err { border-color: var(--red); }
+.fi-n { font-weight: 600; margin-bottom: 2px; }
+.fi-m { font-size: 11px; color: var(--mut); }
+.fi-s { font-family: var(--mono); font-size: 12px; }
+.fi-s.ok  { color: var(--acc); }
+.fi-s.err { color: var(--red); }
+.btn { width: 100%; padding: 15px; background: var(--acc); color: #000; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; font-family: var(--sans); cursor: pointer; margin-top: 18px; transition: background .15s; }
+.btn:active { background: #00f0c0; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.swrap { padding: 14px 14px 100px; }
+.srow { display: flex; gap: 8px; margin-bottom: 16px; }
+.si { flex: 1; background: var(--surf); border: 1.5px solid var(--bdr); border-radius: 13px; padding: 15px 16px; color: var(--txt); font-family: var(--sans); font-size: 16px; font-weight: 500; -webkit-appearance: none; }
+.si:focus { outline: none; border-color: var(--acc); background: var(--surf2); }
+.si::placeholder { color: var(--dim); font-weight: 400; }
+.sbtn { width: 52px; background: var(--acc); color: #000; border: none; border-radius: 13px; font-size: 20px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.sbtn:active { background: #00f0c0; }
+.sbtn:disabled { opacity: .5; }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; }
+.chip { background: var(--surf); border: 1px solid var(--bdr); border-radius: 18px; padding: 6px 13px; font-size: 12px; color: var(--mut); cursor: pointer; }
+.chip:active { border-color: var(--acc); color: var(--acc); }
+.stl { font-family: var(--mono); font-size: 11px; color: var(--mut); margin-bottom: 10px; letter-spacing: .5px; text-transform: uppercase; min-height: 16px; }
+.nokey-banner { background: var(--surf); border: 1px solid var(--bdr); border-radius: 10px; padding: 10px 13px; margin-bottom: 12px; font-size: 12px; color: var(--mut); display: none; }
+.nokey-banner.show { display: block; }
+.nokey-banner span { color: var(--acc); cursor: pointer; }
+.rlist { display: flex; flex-direction: column; gap: 9px; }
+.card { background: var(--surf); border: 1px solid var(--bdr); border-right: 3px solid var(--dim); border-radius: 13px; padding: 14px; }
+.card.y { border-right-color: var(--acc); }
+.card.n { border-right-color: var(--dim); opacity: .65; }
+.ctop { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 9px; }
+.cname { font-size: 14px; font-weight: 700; line-height: 1.35; flex: 1; }
+.pill { font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 5px; white-space: nowrap; flex-shrink: 0; }
+.pill.y { background: var(--acc-d); color: var(--acc); border: 1px solid var(--acc-m); }
+.pill.n { background: var(--red-d); color: var(--red); border: 1px solid var(--red); }
+.tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 9px; }
+.tag { font-size: 11px; color: var(--mut); background: var(--bg); border: 1px solid var(--bdr); border-radius: 5px; padding: 2px 7px; font-family: var(--mono); }
+.cfoot { padding-top: 9px; border-top: 1px solid var(--bdr); }
+.reason { font-size: 11px; color: var(--mut); font-style: italic; }
+.sk { background: var(--surf); border: 1px solid var(--bdr); border-radius: 13px; padding: 14px; }
+.skb { background: var(--surf2); border-radius: 4px; margin-bottom: 8px; }
+@keyframes pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+.sk { animation: pulse 1.3s infinite; }
+.empty { text-align: center; padding: 48px 20px; }
+.empty .ico { font-size: 38px; margin-bottom: 12px; }
+.empty h3 { font-size: 17px; font-weight: 700; margin-bottom: 7px; }
+.empty p { font-size: 13px; color: var(--mut); line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -93,17 +111,20 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans)}
   <div class="logo">ימית<span>.</span></div>
   <div class="hdr-r">
     <div class="badge" id="badge">אין מלאי</div>
-    <button class="ibtn" onclick="openSettings()">⚙</button>
-    <button class="ibtn" onclick="goUpload()">↑</button>
+    <button class="ibtn" title="הגדרות" onclick="openSettings()">&#9881;</button>
+    <button class="ibtn" title="טעינת מלאי" onclick="showUpload()">&#8593;</button>
   </div>
 </div>
 
 <div class="ov-wrap" id="settingsOv">
   <div class="modal">
-    <div class="mhdr"><h3>הגדרות</h3><button class="mclose" onclick="closeSettings()">✕</button></div>
-    <label class="lbl">מפתח Claude API</label>
-    <input class="inp" id="apiKey" type="password" placeholder="sk-ant-api03-..." dir="ltr">
-    <div class="hint">נשמר מקומית · השג ב-platform.anthropic.com → API Keys</div>
+    <div class="mhdr">
+      <h3>הגדרות</h3>
+      <button class="mclose" onclick="closeSettings()">&#x2715;</button>
+    </div>
+    <label class="lbl" for="apiKeyInput">מפתח Claude API</label>
+    <input class="inp" id="apiKeyInput" type="password" placeholder="sk-ant-api03-..." dir="ltr" autocomplete="off">
+    <div class="hint">נשמר מקומית בדפדפן בלבד &middot; השג ב-platform.anthropic.com</div>
     <button class="btn" onclick="saveSettings()" style="margin-top:20px">שמור</button>
   </div>
 </div>
@@ -111,15 +132,14 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans)}
 <div class="scr show" id="scrUpload">
   <div class="upwrap">
     <h2>טעינת מלאי</h2>
-    <p>בחר קבצי CSV (ייצוא מ-Excel). ניתן לבחור מספר קבצים בבת אחת.</p>
+    <p>בחר קבצי CSV מיוצאים מחישובית (KITE, WINDSURF, WING, KAYAKS). ניתן לבחור מספר קבצים בבת אחת.</p>
     <div class="dz" id="dz">
-      <input type="file" id="fi" accept=".csv" multiple>
-      <div class="dz-ico">📂</div>
+      <input type="file" id="fileInput" accept=".csv" multiple>
+      <div class="dz-ico">&#128194;</div>
       <div class="dz-t">בחר קבצי CSV</div>
-      <div class="dz-s">KITE, WINDSURF, WING, KAYAKS...</div>
+      <div class="dz-s">או גרור לכאן</div>
     </div>
-    <div class="flist" id="flist"></div>
-    <div class="dbg" id="dbg"></div>
+    <div class="flist" id="fileList"></div>
     <button class="btn" id="loadBtn" disabled onclick="doLoad()">טען מלאי</button>
   </div>
 </div>
@@ -127,394 +147,512 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans)}
 <div class="scr" id="scrSearch">
   <div class="swrap">
     <div class="srow">
-      <input class="si" id="si" type="search"
-        placeholder='לדוגמה: "EVO 10" או "ריבל 9 כחול" או "kayak"'
-        autocomplete="off" autocorrect="off" spellcheck="false">
-      <button class="sbtn" id="sbtn" onclick="doSearch()">🔍</button>
+      <input class="si" id="searchInput" type="search"
+        placeholder="חפש: EVO 10, ריבל 9, kayak..."
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button class="sbtn" id="searchBtn" onclick="doSearch()">&#128269;</button>
     </div>
     <div class="chips">
-      <div class="chip" onclick="fill('EVO 10')">EVO 10</div>
-      <div class="chip" onclick="fill('ריבל 9 כחול')">ריבל 9 כחול</div>
-      <div class="chip" onclick="fill('NEO SLS 12')">NEO SLS 12</div>
-      <div class="chip" onclick="fill('גלשן 138')">גלשן 138</div>
-      <div class="chip" onclick="fill('kayak')">קיאק</div>
-      <div class="chip" onclick="fill('wing foil')">ווינג פויל</div>
+      <div class="chip" onclick="fillSearch('EVO 10')">EVO 10</div>
+      <div class="chip" onclick="fillSearch('NEO SLS 12')">NEO SLS 12</div>
+      <div class="chip" onclick="fillSearch('ריבל 9')">ריבל 9</div>
+      <div class="chip" onclick="fillSearch('גלשן 138')">גלשן 138</div>
+      <div class="chip" onclick="fillSearch('קיאק')">קיאק</div>
+      <div class="chip" onclick="fillSearch('wing foil')">ווינג פויל</div>
     </div>
-    <div class="stl" id="stl"></div>
-    <div class="rlist" id="rlist"></div>
+    <div class="nokey-banner" id="nokeyBanner">
+      תוצאות ללא AI (אין מפתח API) &mdash; <span onclick="openSettings()">הגדר מפתח</span> לחיפוש חכם
+    </div>
+    <div class="stl" id="statusLine"></div>
+    <div id="resultList"></div>
   </div>
 </div>
 
 <script>
-// ── STATE ──
-let INV = [];
-let RES = [];
-const PC = {};
+'use strict';
 
-// ── PARSER ──
-function parseCSV(text, fn) {
-  const items = [];
-  const raw = text.replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  const lines = raw.split('\n');
-  let cat = catFromFn(fn);
+// ── CONSTANTS (T1) ──
+// Model ID confirmed from system knowledge; column indices from Spike 1;
+// API headers confirmed from Spike 3.
+var CLAUDE_MODEL  = 'claude-haiku-4-5-20251001';
+var CLAUDE_URL    = 'https://api.anthropic.com/v1/messages';
+var STORAGE_INV   = 'yamit_inv';
+var STORAGE_KEY   = 'yamit_key';
+var COL_SKU  = 2;
+var COL_NAME = 3;
+var COL_ALT  = 4;
+var COL_QTY  = 6;
+var PRE_MAX  = 80;
+var RES_MAX  = 8;
+var RES_MIN_SCORE = 0.4;
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
+// ── SAFE HTML ESCAPE (used everywhere before DOM insertion) ──
+// All user-supplied and inventory data is passed through esc() before
+// being placed into HTML via innerHTML. This prevents XSS.
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+// ── PARSER (T1) ──
+// Verified against all 4 real files in Spike 1.
+// Column mapping: COL_SKU=2, COL_NAME=3, COL_ALT=4, COL_QTY=6
+function parseCSV(text, filename) {
+  var items = [];
+  var raw = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  var lines = raw.split('\n');
+  var cat = catFromFilename(filename);
+
+  for (var i = 1; i < lines.length; i++) {
+    var line = lines[i].trim();
     if (!line) continue;
-    const cols = csvSplit(line);
+    var cols = splitCSVLine(line);
     if (cols.length < 4) continue;
 
-    const sku  = trim(cols[2]);
-    const name = trim(cols[3]);
-    const cat4 = trim(cols[4]||'');
-    const qstr = trim(cols[6]||'');
+    var origName = (cols[COL_NAME] || '').trim();
+    var sku  = stripStars(cols[COL_SKU]  || '');
+    var name = stripStars(origName);
+    var alt  = (cols[COL_ALT] || '').trim();
+    var qtyStr = cols.length > COL_QTY ? (cols[COL_QTY] || '').trim() : '';
 
-    if (name.includes('***')) {
-      const c = name.replace(/\*/g,'').trim();
-      if (c.length > 1) cat = c;
+    // Section headers have *** in the ORIGINAL name (Spike 1)
+    if (origName.indexOf('***') !== -1) {
+      var label = origName.replace(/\*/g, '').trim();
+      if (label.length > 1) cat = label;
       continue;
     }
-    if (!name || name.length < 2 || name === 'שם פריט') continue;
 
-    const qty = parseFloat(qstr) || 0;
-    items.push({name, sku, cat4, cat, qty, inStock: qty > 0, fn});
+    if (!name || name.length < 2 || origName === '\u05e9\u05dd \u05e4\u05e8\u05d9\u05d8') continue;
+    if (!sku || sku.length < 3) continue;
+
+    var qty = parseFloat(qtyStr) || 0;
+    items.push({ name: name, sku: sku, alt: alt, cat: cat, qty: qty, in_stock: qty > 0 });
   }
   return items;
 }
 
-function csvSplit(line) {
-  const cols=[]; let cur=''; let q=false;
-  for (let i=0;i<line.length;i++) {
-    const c=line[i];
-    if (c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q;}
-    else if(c===','&&!q){cols.push(cur);cur='';}
-    else cur+=c;
+function stripStars(s) { return s.trim().replace(/^\*+/, ''); }
+
+function catFromFilename(fn) {
+  var f = fn.toLowerCase();
+  if (f.indexOf('kite')  !== -1) return '\u05e7\u05d9\u05d9\u05d8';
+  if (f.indexOf('wind')  !== -1) return '\u05d2\u05dc\u05d9\u05e9\u05ea \u05e8\u05d5\u05d7';
+  if (f.indexOf('wing')  !== -1) return '\u05d5\u05d5\u05d9\u05e0\u05d2';
+  if (f.indexOf('kayak') !== -1) return '\u05e7\u05d9\u05d0\u05e7';
+  return '\u05db\u05dc\u05dc\u05d9';
+}
+
+function splitCSVLine(line) {
+  var cols = [], cur = '', inQ = false;
+  for (var i = 0; i < line.length; i++) {
+    var c = line[i];
+    if (c === '"') {
+      if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (c === ',' && !inQ) {
+      cols.push(cur); cur = '';
+    } else { cur += c; }
   }
-  cols.push(cur); return cols;
+  cols.push(cur);
+  return cols;
 }
 
-function trim(s){return(s||'').trim().replace(/^\*+/,'');}
+// ── STORE (T2) ──
+var INV = [];
 
-function catFromFn(f){
-  f=f.toLowerCase();
-  if(f.includes('kite'))   return 'קייט';
-  if(f.includes('wind'))   return 'גלישת רוח';
-  if(f.includes('wing'))   return 'ווינג';
-  if(f.includes('kayak'))  return 'קיאק';
-  if(f.includes('sup'))    return 'סאפ';
-  if(f.includes('wet'))    return 'חליפות';
-  return 'כללי';
+function setInventory(items) {
+  INV = items;
+  saveToStorage(items);
+  updateBadge();
 }
 
-// ── UPLOAD ──
-let pending = [];
+function saveToStorage(items) {
+  try {
+    var compact = items.map(function(x) {
+      return { n: x.name, s: x.sku, a: x.alt, c: x.cat, q: x.qty, i: x.in_stock ? 1 : 0 };
+    });
+    localStorage.setItem(STORAGE_INV, JSON.stringify(compact));
+  } catch(e) { /* quota exceeded or private mode — non-fatal */ }
+}
 
-document.getElementById('fi').addEventListener('change', e => {
-  pending = Array.from(e.target.files);
-  showPending();
+function loadFromStorage() {
+  try {
+    var raw = localStorage.getItem(STORAGE_INV);
+    if (!raw) return false;
+    var compact = JSON.parse(raw);
+    INV = compact.map(function(x) {
+      return { name: x.n, sku: x.s, alt: x.a, cat: x.c, qty: x.q, in_stock: !!x.i };
+    });
+    return INV.length > 0;
+  } catch(e) { INV = []; return false; }
+}
+
+function updateBadge() {
+  var total = INV.length;
+  var inStock = INV.filter(function(x) { return x.in_stock; }).length;
+  var el = document.getElementById('badge');
+  if (total) {
+    el.textContent = inStock + '/' + total;
+    el.className = 'badge on';
+  } else {
+    el.textContent = '\u05d0\u05d9\u05df \u05de\u05dc\u05d0\u05d9';
+    el.className = 'badge';
+  }
+}
+
+// ── SETTINGS (T2) ──
+function getKey()    { return localStorage.getItem(STORAGE_KEY) || ''; }
+function setKey(k)   { localStorage.setItem(STORAGE_KEY, k); }
+
+function openSettings() {
+  document.getElementById('apiKeyInput').value = getKey();
+  document.getElementById('settingsOv').classList.add('show');
+}
+function closeSettings() {
+  document.getElementById('settingsOv').classList.remove('show');
+}
+function saveSettings() {
+  var k = document.getElementById('apiKeyInput').value.trim();
+  if (k) setKey(k);
+  closeSettings();
+}
+document.getElementById('settingsOv').addEventListener('click', function(e) {
+  if (e.target === e.currentTarget) closeSettings();
 });
 
-const dzEl = document.getElementById('dz');
-dzEl.addEventListener('dragover', e=>{e.preventDefault();dzEl.classList.add('ov');});
-dzEl.addEventListener('dragleave',()=>dzEl.classList.remove('ov'));
-dzEl.addEventListener('drop', e=>{
+// ── PREFILTER (T3) ──
+var TRANS = {
+  '\u05d0\u05d9\u05d1\u05d5':'evo',   'evo':'\u05d0\u05d9\u05d1\u05d5',
+  '\u05e8\u05d9\u05d1\u05dc':'rebel', 'rebel':'\u05e8\u05d9\u05d1\u05dc',
+  '\u05e0\u05d0\u05d5':'neo',         'neo':'\u05e0\u05d0\u05d5',
+  '\u05d3\u05d9\u05d9\u05e1':'dice',  'dice':'\u05d3\u05d9\u05d9\u05e1',
+  '\u05d5\u05e0\u05d2\u05e1':'vegas', 'vegas':'\u05d5\u05e0\u05d2\u05e1',
+  '\u05d5\u05d0\u05dd':'wam',         'wam':'\u05d5\u05d0\u05dd',
+  '\u05d2\u05d5\u05e0\u05d6\u05dc\u05e1':'gonzales', 'gonzales':'\u05d2\u05d5\u05e0\u05d6\u05dc\u05e1',
+};
+var NUM_WORDS = {
+  '\u05d0\u05d7\u05d3':'1','\u05e9\u05ea\u05d9\u05d9\u05dd':'2','\u05e9\u05dc\u05d5\u05e9':'3',
+  '\u05d0\u05e8\u05d1\u05e2':'4','\u05d7\u05de\u05e9':'5','\u05e9\u05e9':'6',
+  '\u05e9\u05d1\u05e2':'7','\u05e9\u05de\u05d5\u05e0\u05d4':'8',
+  '\u05ea\u05e9\u05e2':'9','\u05e2\u05e9\u05e8':'10','\u05e2\u05e9\u05e8\u05d4':'10',
+  '\u05d0\u05d7\u05d3 \u05e2\u05e9\u05e8':'11','\u05e9\u05ea\u05d9\u05dd \u05e2\u05e9\u05e8\u05d4':'12',
+  '\u05e9\u05dc\u05d5\u05e9 \u05e2\u05e9\u05e8\u05d4':'13',
+};
+
+function preFilter(inv, query) {
+  if (!inv.length || !query.trim()) return [];
+  var q = query.toLowerCase();
+  for (var word in NUM_WORDS) {
+    if (NUM_WORDS.hasOwnProperty(word)) {
+      q = q.split(word).join(NUM_WORDS[word]);
+    }
+  }
+  var toks = q.split(/\s+/).filter(Boolean);
+  var expanded = [];
+  for (var i = 0; i < toks.length; i++) {
+    expanded.push(toks[i]);
+    if (TRANS[toks[i]]) expanded.push(TRANS[toks[i]]);
+  }
+  toks = expanded;
+
+  var scored = inv.map(function(item) {
+    var hay = (item.name + ' ' + item.cat + ' ' + item.sku).toLowerCase();
+    var sc = 0;
+    for (var j = 0; j < toks.length; j++) {
+      var t = toks[j];
+      if (hay.indexOf(t) !== -1) {
+        sc += 2;
+      } else if (t.length >= 3) {
+        var words = hay.split(/\s+/);
+        for (var k = 0; k < words.length; k++) {
+          if (words[k].indexOf(t) === 0) { sc += 1; break; }
+        }
+      }
+    }
+    return { item: item, sc: sc };
+  });
+
+  return scored
+    .filter(function(x) { return x.sc > 0; })
+    .sort(function(a, b) { return b.sc - a.sc; })
+    .slice(0, PRE_MAX)
+    .map(function(x) { return x.item; });
+}
+
+// ── CLAUDE CLIENT (T6) ──
+// CRITICAL FIX: all 3 required headers now included.
+// Previous code had only Content-Type — missing x-api-key, anthropic-version,
+// and anthropic-dangerous-direct-browser-access (confirmed required in Spike 3).
+async function claudeSearch(query, candidates, apiKey) {
+  var list = candidates.map(function(x, i) {
+    return i + '|' + (x.in_stock ? '\u2713' + x.qty : '\u2717') + '|' + x.name + '|' + x.cat + '|' + x.sku;
+  }).join('\n');
+
+  var system = 'You are an inventory search assistant for an Israeli water sports store (Yamit).\n' +
+    'Match the query to the best items. Return ONLY a JSON array, no other text.\n' +
+    'Each element: {"idx":<number>,"score":<0.0-1.0>,"reason":"<brief Hebrew>"}\n' +
+    'Max ' + RES_MAX + ' results. Min score ' + RES_MIN_SCORE + '. Prefer in-stock items (\u2713).\n\n' +
+    'Domain: EVO=\u05d0\u05d9\u05d1\u05d5, REBEL=\u05e8\u05d9\u05d1\u05dc, NEO=\u05e0\u05d0\u05d5, ' +
+    'DICE=\u05d3\u05d9\u05d9\u05e1, GONZALES=\u05d2\u05d5\u05e0\u05d6\u05dc\u05e1\n' +
+    'Kite sizes meters: 7-14. Board cm: 132-153. Ft: 4\'6-5\'11\n' +
+    'Hebrew nums: \u05e2\u05e9\u05e8=10, \u05ea\u05e9\u05e2=9, \u05e9\u05ea\u05d9\u05dd \u05e2\u05e9\u05e8\u05d4=12\n' +
+    '\u05db\u05d7\u05d5\u05dc=blue, \u05d0\u05d3\u05d5\u05dd=red, \u05dc\u05d1\u05df=white, \u05d0\u05e4\u05d5\u05e8=gray';
+
+  var resp = await fetch(CLAUDE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 600,
+      system: system,
+      messages: [{ role: 'user', content: 'Query: "' + query + '"\n\nItems:\n' + list }],
+    }),
+  });
+
+  if (!resp.ok) {
+    var err = await resp.json().catch(function() { return {}; });
+    throw new Error(err.error && err.error.message ? err.error.message : 'HTTP ' + resp.status);
+  }
+
+  var data = await resp.json();
+  var text = ((data.content && data.content[0] && data.content[0].text) || '[]')
+    .replace(/```json|```/g, '').trim();
+  var matches = JSON.parse(text);
+
+  return matches
+    .filter(function(m) { return typeof m.idx === 'number' && m.score >= RES_MIN_SCORE && candidates[m.idx]; })
+    .sort(function(a, b) { return b.score - a.score; })
+    .slice(0, RES_MAX)
+    .map(function(m) { return { item: candidates[m.idx], score: m.score, reason: m.reason }; });
+}
+
+// ── RENDER (T7) ──
+// All inventory data is passed through esc() before DOM insertion.
+// This is the only place where innerHTML is used with dynamic content,
+// and all interpolated values are HTML-escaped (see esc() above).
+function buildCard(result) {
+  var item = result.item;
+  var reason = result.reason || '';
+  var cls  = item.in_stock ? 'y' : 'n';
+  var pill = item.in_stock
+    ? '\u05d1\u05de\u05dc\u05d0\u05d9 \u00d7' + item.qty
+    : '\u05d0\u05d6\u05dc';
+
+  var tagsHtml = '<span class="tag">' + esc(item.cat) + '</span>';
+  if (item.sku) tagsHtml += '<span class="tag">' + esc(item.sku) + '</span>';
+  if (item.alt) tagsHtml += '<span class="tag">' + esc(item.alt) + '</span>';
+
+  var footHtml = reason
+    ? '<div class="cfoot"><div class="reason">' + esc(reason) + '</div></div>'
+    : '';
+
+  return '<div class="card ' + cls + '">' +
+    '<div class="ctop">' +
+      '<div class="cname">' + esc(item.name) + '</div>' +
+      '<div class="pill ' + cls + '">' + pill + '</div>' +
+    '</div>' +
+    '<div class="tags">' + tagsHtml + '</div>' +
+    footHtml +
+    '</div>';
+}
+
+function buildSkeletons(n) {
+  var out = '<div class="rlist">';
+  for (var i = 0; i < n; i++) {
+    out += '<div class="sk">' +
+      '<div class="skb" style="height:16px;width:65%"></div>' +
+      '<div class="skb" style="height:11px;width:40%"></div>' +
+      '<div class="skb" style="height:13px;width:50%;margin-top:10px"></div>' +
+      '</div>';
+  }
+  out += '</div>';
+  return out;
+}
+
+function buildEmpty(icon, title, msg) {
+  return '<div class="empty">' +
+    '<div class="ico">' + icon + '</div>' +
+    '<h3>' + esc(title) + '</h3>' +
+    '<p>' + esc(msg) + '</p>' +
+    '</div>';
+}
+
+// ── UPLOAD SCREEN (T5) ──
+var pendingFiles = [];
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  pendingFiles = Array.from(e.target.files);
+  showPendingFiles();
+});
+
+var dzEl = document.getElementById('dz');
+dzEl.addEventListener('dragover', function(e) { e.preventDefault(); dzEl.classList.add('ov'); });
+dzEl.addEventListener('dragleave', function() { dzEl.classList.remove('ov'); });
+dzEl.addEventListener('drop', function(e) {
   e.preventDefault(); dzEl.classList.remove('ov');
-  pending = Array.from(e.dataTransfer.files).filter(f=>f.name.endsWith('.csv'));
-  showPending();
+  pendingFiles = Array.from(e.dataTransfer.files).filter(function(f) { return f.name.endsWith('.csv'); });
+  showPendingFiles();
 });
 
-function showPending(){
-  document.getElementById('flist').innerHTML = pending.map(f=>`
-    <div class="fi">
-      <div><div class="fi-n">${esc(f.name)}</div><div class="fi-m">ממתין...</div></div>
-      <div class="fi-s">⏳</div>
-    </div>`).join('');
-  document.getElementById('loadBtn').disabled = !pending.length;
-  document.getElementById('dbg').textContent = '';
+function showPendingFiles() {
+  var html = pendingFiles.map(function(f) {
+    return '<div class="fi">' +
+      '<div><div class="fi-n">' + esc(f.name) + '</div>' +
+      '<div class="fi-m">\u05de\u05de\u05ea\u05d9\u05df...</div></div>' +
+      '<div class="fi-s">\u23f3</div></div>';
+  }).join('');
+  document.getElementById('fileList').innerHTML = html;
+  document.getElementById('loadBtn').disabled = pendingFiles.length === 0;
 }
 
-async function doLoad(){
-  if (!pending.length) return;
-  const btn = document.getElementById('loadBtn');
-  const dbg = document.getElementById('dbg');
+async function doLoad() {
+  if (!pendingFiles.length) return;
+  var btn = document.getElementById('loadBtn');
   btn.disabled = true;
-  btn.textContent = 'קורא קבצים...';
-  INV = [];
+  btn.textContent = '\u05e7\u05d5\u05e8\u05d0 \u05e7\u05d1\u05e6\u05d9\u05dd...';
 
-  const sums = [];
-  for (const f of pending){
+  var allItems = [];
+  var statuses = [];
+
+  for (var idx = 0; idx < pendingFiles.length; idx++) {
+    var f = pendingFiles[idx];
     try {
-      const text = await readF(f);
-      dbg.textContent += `${f.name}: ${text.length} תווים\n`;
-      const parsed = parseCSV(text, f.name);
-      const ns = parsed.filter(i=>i.inStock).length;
-      INV.push(...parsed);
-      sums.push({name:f.name, count:parsed.length, ns, ok:true});
-      dbg.textContent += `  → ${parsed.length} פריטים, ${ns} במלאי\n`;
-    } catch(e){
-      sums.push({name:f.name, count:0, ok:false, err:e.message});
-      dbg.textContent += `  ✗ ${e.message}\n`;
+      var text = await readFileAsText(f);
+      var items = parseCSV(text, f.name);
+      var ns = items.filter(function(x) { return x.in_stock; }).length;
+      allItems = allItems.concat(items);
+      statuses.push({ name: f.name, count: items.length, ns: ns, ok: true });
+    } catch(e) {
+      statuses.push({ name: f.name, ok: false, error: e.message });
     }
   }
 
-  try { localStorage.setItem('yamit_inv', JSON.stringify(INV)); } catch(e){}
+  var listHtml = statuses.map(function(s) {
+    var meta = s.ok
+      ? s.count + ' \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u00b7 ' + s.ns + ' \u05d1\u05de\u05dc\u05d0\u05d9'
+      : esc(s.error);
+    return '<div class="fi ' + (s.ok ? 'ok' : 'err') + '">' +
+      '<div><div class="fi-n">' + esc(s.name) + '</div>' +
+      '<div class="fi-m">' + meta + '</div></div>' +
+      '<div class="fi-s ' + (s.ok ? 'ok' : 'err') + '">' + (s.ok ? '\u2713' : '\u2717') + '</div>' +
+      '</div>';
+  }).join('');
+  document.getElementById('fileList').innerHTML = listHtml;
 
-  document.getElementById('flist').innerHTML = sums.map(s=>`
-    <div class="fi ${s.ok?'ok':'err'}">
-      <div>
-        <div class="fi-n">${esc(s.name)}</div>
-        <div class="fi-m">${s.ok?`${s.count} פריטים · ${s.ns} במלאי`:s.err}</div>
-      </div>
-      <div class="fi-s ${s.ok?'ok':'err'}">${s.ok?'✓':'✗'}</div>
-    </div>`).join('');
-
-  if (INV.length > 0){
-    btn.textContent = `✓ נטענו ${INV.length} פריטים`;
-    setBadge();
-    setTimeout(goSearch, 700);
+  if (allItems.length > 0) {
+    setInventory(allItems);
+    btn.textContent = '\u2713 \u05e0\u05d8\u05e2\u05e0\u05d5 ' + allItems.length + ' \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd';
+    setTimeout(showSearch, 800);
   } else {
-    btn.textContent = 'שגיאה — ראה פרטים';
+    btn.textContent = '\u05e9\u05d2\u05d9\u05d0\u05d4 \u2014 \u05e0\u05e1\u05d4 \u05e9\u05e0\u05d9\u05ea';
     btn.disabled = false;
   }
 }
 
-function readF(file){
-  return new Promise((res,rej)=>{
-    const r = new FileReader();
-    r.onload = e => res(e.target.result);
-    r.onerror = () => rej(new Error('שגיאת קריאה'));
-    r.readAsText(file,'UTF-8');
+function readFileAsText(file) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onload  = function(e) { resolve(e.target.result); };
+    reader.onerror = function() { reject(new Error('\u05e9\u05d2\u05d9\u05d0\u05ea \u05e7\u05e8\u05d9\u05d0\u05d4')); };
+    reader.readAsText(file, 'UTF-8');
   });
 }
 
-// ── SETTINGS ──
-function openSettings(){
-  document.getElementById('apiKey').value = localStorage.getItem('yamit_key')||'';
-  document.getElementById('settingsOv').classList.add('show');
-}
-function closeSettings(){ document.getElementById('settingsOv').classList.remove('show'); }
-function saveSettings(){
-  const k = document.getElementById('apiKey').value.trim();
-  if(k) localStorage.setItem('yamit_key',k);
-  closeSettings();
-}
-document.getElementById('settingsOv').addEventListener('click', e=>{
-  if(e.target===e.currentTarget) closeSettings();
+// ── SEARCH SCREEN (T7) ──
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doSearch();
 });
 
-// ── NAV ──
-function goUpload(){
+function fillSearch(text) {
+  document.getElementById('searchInput').value = text;
+  doSearch();
+}
+
+async function doSearch() {
+  var query = document.getElementById('searchInput').value.trim();
+  if (!query) return;
+
+  var apiKey    = getKey();
+  var rl        = document.getElementById('resultList');
+  var stl       = document.getElementById('statusLine');
+  var nokeyEl   = document.getElementById('nokeyBanner');
+  var searchBtn = document.getElementById('searchBtn');
+
+  if (!INV.length) {
+    rl.innerHTML = buildEmpty('\ud83d\udce6', '\u05d0\u05d9\u05df \u05de\u05dc\u05d0\u05d9', '\u05dc\u05d7\u05e5 \u2191 \u05dc\u05d8\u05e2\u05d9\u05e0\u05ea \u05e7\u05d1\u05e6\u05d9 CSV');
+    return;
+  }
+
+  searchBtn.disabled = true;
+  nokeyEl.classList.remove('show');
+  stl.textContent = '\u05de\u05e1\u05e0\u05df \u05de\u05d5\u05e2\u05de\u05d3\u05d9\u05dd...';
+  rl.innerHTML = buildSkeletons(4);
+
+  try {
+    var candidates = preFilter(INV, query);
+
+    if (!candidates.length) {
+      rl.innerHTML = buildEmpty('\ud83e\udd14', '\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0', '\u05e0\u05e1\u05d4 \u05de\u05d5\u05e0\u05d7 \u05d0\u05d7\u05e8 \u2014 EVO 10, \u05e8\u05d9\u05d1\u05dc 9, kayak');
+      stl.textContent = '';
+      searchBtn.disabled = false;
+      return;
+    }
+
+    var results;
+
+    if (!apiKey) {
+      nokeyEl.classList.add('show');
+      results = candidates.slice(0, 20).map(function(item) { return { item: item, score: 1, reason: '' }; });
+      stl.textContent = results.length + ' \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea (\u05de\u05d9\u05dc\u05d5\u05ea \u05de\u05e4\u05ea\u05d7)';
+    } else {
+      stl.textContent = candidates.length + ' \u05de\u05d5\u05e2\u05de\u05d3\u05d9\u05dd \u2192 Claude...';
+      results = await claudeSearch(query, candidates, apiKey);
+      stl.textContent = results.length ? results.length + ' \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea' : '';
+    }
+
+    if (!results.length) {
+      rl.innerHTML = buildEmpty('\ud83e\udd37', '\u05d0\u05d9\u05df \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea', '\u05e0\u05e1\u05d4: EVO 10, \u05e8\u05d9\u05d1\u05dc 9, \u05e7\u05d9\u05d0\u05e7, wing foil');
+    } else {
+      var html = '<div class="rlist">' + results.map(buildCard).join('') + '</div>';
+      rl.innerHTML = html;
+    }
+
+  } catch(e) {
+    rl.innerHTML = buildEmpty('\u26a0\ufe0f', '\u05e9\u05d2\u05d9\u05d0\u05d4', esc(e.message));
+    stl.textContent = '';
+  }
+
+  searchBtn.disabled = false;
+}
+
+// ── NAVIGATION + INIT (T4, T8) ──
+function showUpload() {
   document.getElementById('scrUpload').classList.add('show');
   document.getElementById('scrSearch').classList.remove('show');
 }
-function goSearch(){
+
+function showSearch() {
   document.getElementById('scrUpload').classList.remove('show');
   document.getElementById('scrSearch').classList.add('show');
-  document.getElementById('si').focus();
-}
-function setBadge(){
-  const ns = INV.filter(i=>i.inStock).length;
-  const b = document.getElementById('badge');
-  b.textContent = INV.length ? `${ns}/${INV.length}` : 'אין מלאי';
-  b.className = 'badge' + (INV.length?' on':'');
+  document.getElementById('searchInput').focus();
 }
 
-// ── PRE-FILTER ──
-const TR={'איבו':'evo','evo':'איבו','ריבל':'rebel','rebel':'ריבל','נאו':'neo','neo':'נאו','דייס':'dice','dice':'דייס','גונזלס':'gonzales','gonzales':'גונזלס','ואם':'wam','wam':'ואם'};
-const NM={'אחד':'1','שתיים':'2','שלוש':'3','ארבע':'4','חמש':'5','שש':'6','שבע':'7','שמונה':'8','תשע':'9','עשר':'10','עשרה':'10','אחד עשר':'11','שתים עשרה':'12','שלוש עשרה':'13'};
-
-function preFilter(q){
-  if (!INV.length) return [];
-  const toks = q.toLowerCase().split(/\s+/).map(t=>NM[t]||TR[t]||t);
-  const scored = INV.map(item=>{
-    const hay = (item.name+' '+item.cat+' '+item.sku).toLowerCase();
-    let sc=0;
-    for(const t of toks){
-      if(hay.includes(t)) sc+=2;
-      else if(t.length>=3 && hay.split(/\s+/).some(w=>w.startsWith(t))) sc+=1;
-    }
-    return {item,sc};
-  });
-  return scored.filter(s=>s.sc>0).sort((a,b)=>b.sc-a.sc).slice(0,80).map(s=>s.item);
-}
-
-// ── SEARCH ──
-document.getElementById('si').addEventListener('keydown', e=>{if(e.key==='Enter') doSearch();});
-function fill(t){ document.getElementById('si').value=t; doSearch(); }
-
-async function doSearch(){
-  const q = document.getElementById('si').value.trim();
-  if (!q) return;
-  const key = localStorage.getItem('yamit_key');
-  const rl  = document.getElementById('rlist');
-  const stl = document.getElementById('stl');
-
-  if (!key){
-    rl.innerHTML = emptyS('🔑','נדרש מפתח API','פתח הגדרות ⚙ והזן מפתח Claude API'); return;
+(function init() {
+  if (loadFromStorage()) {
+    updateBadge();
+    showSearch();
+  } else {
+    showUpload();
   }
-  if (!INV.length){
-    rl.innerHTML = emptyS('📦','אין מלאי','לחץ ↑ לטעינת קבצי CSV'); return;
-  }
-
-  document.getElementById('sbtn').disabled = true;
-  stl.textContent = 'מסנן מועמדים...';
-  rl.innerHTML = skels(4);
-
-  try {
-    const cands = preFilter(q);
-    stl.textContent = `${cands.length} מועמדים → Claude...`;
-
-    if (!cands.length){
-      rl.innerHTML = emptyS('🤔','לא נמצא','נסה מונח אחר');
-      stl.textContent=''; return;
-    }
-
-    RES = await askClaude(q, cands);
-    if (!RES.length){
-      rl.innerHTML = emptyS('🤷','אין תוצאות','נסה: EVO 10, ריבל 9, kayak');
-      stl.textContent=''; return;
-    }
-
-    stl.textContent = `${RES.length} תוצאות`;
-    rl.innerHTML = RES.map((r,i)=>cardH(r,i)).join('');
-    RES.forEach((_,i)=>loadPx(i));
-
-  } catch(e){
-    rl.innerHTML = emptyS('⚠️','שגיאה',esc(e.message));
-    stl.textContent='';
-  }
-  document.getElementById('sbtn').disabled = false;
-}
-
-// ── CLAUDE ──
-async function askClaude(q, cands){
-  const key = localStorage.getItem('yamit_key');
-  const list = cands.map((x,i)=>`${i}|${x.inStock?'✓'+x.qty:'✗'}|${x.name}|${x.cat}|${x.sku}`).join('\n');
-
-  const sys=`You are an inventory search assistant for an Israeli water sports store.
-Match the query to items. Return ONLY a JSON array, no other text.
-Each element: {"idx":<number>,"score":<0.0-1.0>,"reason":"<brief Hebrew>"}
-Max 8 results. Min score 0.4. Prefer in-stock (✓).
-
-Domain knowledge:
-EVO=איבו, REBEL=ריבל, NEO=נאו, DICE=דייס, GONZALES=גונזלס
-Kite sizes in meters: 7,8,9,10,11,12,13
-Board sizes cm: 132,133,135,136,138,139,141,142
-Board sizes ft: 4'11,5'1,5'3,5'5...
-Hebrew numbers: עשר=10, תשע=9, שתים עשרה=12
-Colors: כחול=blue, אדום=red, ורוד=pink, לבן=white, אפור=gray, כתום=orange, ירוק=green
-SLS=performance, D/LAB=premium line`;
-
-  const resp = await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model:'claude-haiku-4-5-20251001',
-      max_tokens:800,
-      system:sys,
-      messages:[{role:'user',content:`Query: "${q}"\n\nItems:\n${list}`}]
-    })
-  });
-
-  if (!resp.ok){
-    const e=await resp.json().catch(()=>({}));
-    throw new Error(e.error?.message||`HTTP ${resp.status}`);
-  }
-
-  const data = await resp.json();
-  const txt = (data.content?.[0]?.text||'[]').replace(/```json|```/g,'').trim();
-  const matches = JSON.parse(txt);
-
-  return matches
-    .filter(m=>m.score>=0.4 && cands[m.idx])
-    .sort((a,b)=>b.score-a.score)
-    .map(m=>({item:cands[m.idx], score:m.score, reason:m.reason}));
-}
-
-// ── PRICE ──
-async function loadPx(i){
-  const r=RES[i]; if(!r) return;
-  const pEl=document.getElementById(`p${i}`);
-  const lEl=document.getElementById(`l${i}`);
-  if(!pEl) return;
-  const ck=r.item.sku||r.item.name;
-  if(PC[ck]){applyPx(i,PC[ck]);return;}
-
-  const eng=(r.item.name.match(/[A-Z][A-Z0-9\s\/\'\-]{2,}/g)||[]).slice(0,2).join(' ').trim().substring(0,35);
-  const url=`https://yamitysb.co.il/?s=${encodeURIComponent(eng||r.item.name.substring(0,30))}&post_type=product`;
-  try{
-    const res=await fetch(url,{signal:AbortSignal.timeout(6000)});
-    if(!res.ok) throw new Error();
-    const html=await res.text();
-    const um=html.match(/href="(https:\/\/yamitysb\.co\.il\/product\/[^"]+)"/);
-    const pm=html.match(/₪\s*([\d,]+)/);
-    const live={url:um?.[1]||null, price:pm?parseInt(pm[1].replace(',',''))||null:null};
-    PC[ck]=live; applyPx(i,live);
-  }catch{
-    PC[ck]={url:null,price:null};
-    if(pEl){pEl.textContent='';pEl.className='price';}
-  }
-}
-
-function applyPx(i,live){
-  const pEl=document.getElementById(`p${i}`);
-  const lEl=document.getElementById(`l${i}`);
-  if(pEl){
-    if(live.price){pEl.textContent=`₪${live.price.toLocaleString()}`;pEl.className='price found';}
-    else{pEl.textContent='';pEl.className='price';}
-  }
-  if(lEl&&live.url) lEl.innerHTML=`<a class="slink" href="${esc(live.url)}" target="_blank">פתח באתר ↗</a>`;
-}
-
-// ── RENDER ──
-function cardH(r,i){
-  const {item,reason}=r;
-  const sc=item.inStock?'y':'n';
-  const pt=item.inStock?`במלאי ×${item.qty}`:'אזל';
-  return `<div class="card ${sc}" onclick="loadPx(${i})">
-    <div class="ctop">
-      <div class="cname">${esc(item.name)}</div>
-      <div class="pill ${sc}">${pt}</div>
-    </div>
-    <div class="tags">
-      <span class="tag">${esc(item.cat)}</span>
-      ${item.sku?`<span class="tag">${esc(item.sku)}</span>`:''}
-      ${item.cat4?`<span class="tag">${esc(item.cat4)}</span>`:''}
-    </div>
-    <div class="cfoot">
-      <div>
-        <div class="reason">${esc(reason)}</div>
-        <div id="l${i}"></div>
-      </div>
-      <div class="price loading" id="p${i}">טוען...</div>
-    </div>
-  </div>`;
-}
-
-function skels(n){
-  return `<div class="rlist">${Array(n).fill(0).map(()=>`
-    <div class="sk">
-      <div class="skb" style="height:16px;width:65%"></div>
-      <div class="skb" style="height:11px;width:40%"></div>
-      <div class="skb" style="height:13px;width:50%;margin-top:10px"></div>
-    </div>`).join('')}</div>`;
-}
-
-function emptyS(ico,t,m){
-  return `<div class="empty"><div class="ico">${ico}</div><h3>${t}</h3><p>${m}</p></div>`;
-}
-
-function esc(s){
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ── INIT ──
-(function(){
-  try{
-    const s=localStorage.getItem('yamit_inv');
-    if(s){INV=JSON.parse(s);if(INV.length){setBadge();goSearch();return;}}
-  }catch(e){INV=[];}
-  goUpload();
 })();
 </script>
 </body>
