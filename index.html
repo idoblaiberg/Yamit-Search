@@ -93,8 +93,9 @@ body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webk
 .pill.n { background: var(--red-d); color: var(--red); border: 1px solid var(--red); }
 .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 9px; }
 .tag { font-size: 11px; color: var(--mut); background: var(--bg); border: 1px solid var(--bdr); border-radius: 5px; padding: 2px 7px; font-family: var(--mono); }
-.cfoot { padding-top: 9px; border-top: 1px solid var(--bdr); }
-.reason { font-size: 11px; color: var(--mut); font-style: italic; }
+.cfoot { padding-top: 9px; border-top: 1px solid var(--bdr); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.reason { font-size: 11px; color: var(--mut); font-style: italic; flex: 1; }
+.price-btn { font-size: 11px; color: var(--acc); background: var(--acc-d); border: 1px solid var(--acc-m); border-radius: 6px; padding: 4px 10px; white-space: nowrap; text-decoration: none; flex-shrink: 0; }
 .sk { background: var(--surf); border: 1px solid var(--bdr); border-radius: 13px; padding: 14px; }
 .skb { background: var(--surf2); border-radius: 4px; margin-bottom: 8px; }
 @keyframes pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
@@ -451,9 +452,14 @@ function buildCard(result) {
   if (item.sku) tagsHtml += '<span class="tag">' + esc(item.sku) + '</span>';
   if (item.alt) tagsHtml += '<span class="tag">' + esc(item.alt) + '</span>';
 
-  var footHtml = reason
-    ? '<div class="cfoot"><div class="reason">' + esc(reason) + '</div></div>'
-    : '';
+  var searchQ = encodeURIComponent(item.name.replace(/[\u0590-\u05FF]+\s*/g, '').trim() || item.name);
+  var priceUrl = 'https://yamitysb.co.il/?s=' + searchQ + '&post_type=product';
+  var priceBtn = '<a class="price-btn" href="' + priceUrl + '" target="_blank" rel="noopener">\u05deחיר ↗</a>';
+
+  var footHtml = '<div class="cfoot">' +
+    '<div class="reason">' + esc(reason) + '</div>' +
+    priceBtn +
+    '</div>';
 
   return '<div class="card ' + cls + '">' +
     '<div class="ctop">' +
