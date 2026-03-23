@@ -133,9 +133,9 @@ body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webk
 <div class="scr show" id="scrUpload">
   <div class="upwrap">
     <h2>טעינת מלאי</h2>
-    <p>בחר קבצי CSV מיוצאים מחישובית (KITE, WINDSURF, WING, KAYAKS). ניתן לבחור מספר קבצים בבת אחת.</p>
+    <p>בחר קבצי CSV מיוצאים מחישובית (KITE, WINDSURF, WING, KAYAKS) <em>או</em> קובץ JSON מ-scraper.py. ניתן לבחור מספר קבצים בבת אחת.</p>
     <div class="dz" id="dz">
-      <input type="file" id="fileInput" accept=".csv" multiple>
+      <input type="file" id="fileInput" accept=".csv,.json" multiple>
       <div class="dz-ico">&#128194;</div>
       <div class="dz-t">בחר קבצי CSV</div>
       <div class="dz-s">או גרור לכאן</div>
@@ -247,6 +247,30 @@ function catFromFilename(fn) {
   return '\u05db\u05dc\u05dc\u05d9';
 }
 
+// ── SCRAPED JSON PARSER ──
+// Parses output of scraper.py: { source, scraped_at, count, items: [...] }
+// Each item already uses the INV schema (name, sku, alt, cat, qty, in_stock, price, url).
+function parseScrapedJSON(text) {
+  var data = JSON.parse(text);
+  var raw = Array.isArray(data) ? data : (data.items || []);
+  var items = [];
+  for (var i = 0; i < raw.length; i++) {
+    var r = raw[i];
+    if (!r || !r.name || r.name.length < 2) continue;
+    items.push({
+      name:     String(r.name || '').trim(),
+      sku:      String(r.sku  || '').trim(),
+      alt:      String(r.alt  || '').trim(),
+      cat:      String(r.cat  || '\u05db\u05dc\u05dc\u05d9').trim(),
+      qty:      typeof r.qty === 'number' ? r.qty : (r.in_stock ? 1 : 0),
+      in_stock: !!r.in_stock,
+      price:    typeof r.price === 'number' ? r.price : 0,
+      url:      String(r.url  || '').trim(),
+    });
+  }
+  return items;
+}
+
 function splitCSVLine(line) {
   var cols = [], cur = '', inQ = false;
   for (var i = 0; i < line.length; i++) {
@@ -274,7 +298,8 @@ function setInventory(items) {
 function saveToStorage(items) {
   try {
     var compact = items.map(function(x) {
-      return { n: x.name, s: x.sku, a: x.alt, c: x.cat, q: x.qty, i: x.in_stock ? 1 : 0 };
+      return { n: x.name, s: x.sku, a: x.alt, c: x.cat, q: x.qty, i: x.in_stock ? 1 : 0,
+               p: x.price || 0, u: x.url || '' };
     });
     localStorage.setItem(STORAGE_INV, JSON.stringify(compact));
   } catch(e) { /* quota exceeded or private mode — non-fatal */ }
@@ -286,7 +311,8 @@ function loadFromStorage() {
     if (!raw) return false;
     var compact = JSON.parse(raw);
     INV = compact.map(function(x) {
-      return { name: x.n, sku: x.s, alt: x.a, cat: x.c, qty: x.q, in_stock: !!x.i };
+      return { name: x.n, sku: x.s, alt: x.a, cat: x.c, qty: x.q, in_stock: !!x.i,
+               price: x.p || 0, url: x.u || '' };
     });
     return INV.length > 0;
   } catch(e) { INV = []; return false; }
@@ -452,9 +478,18 @@ function buildCard(result) {
   if (item.sku) tagsHtml += '<span class="tag">' + esc(item.sku) + '</span>';
   if (item.alt) tagsHtml += '<span class="tag">' + esc(item.alt) + '</span>';
 
-  var searchQ = encodeURIComponent(item.name.replace(/[\u0590-\u05FF]+\s*/g, '').trim() || item.name);
-  var priceUrl = 'https://yamitysb.co.il/?s=' + searchQ + '&post_type=product';
-  var priceBtn = '<a class="price-btn" href="' + priceUrl + '" target="_blank" rel="noopener">\u05deחיר ↗</a>';
+  // Prefer direct product URL from scraper; fall back to site search
+  var priceUrl;
+  var priceBtnLabel;
+  if (item.url) {
+    priceUrl = item.url;
+    priceBtnLabel = (item.price ? '₪' + Math.round(item.price) + ' ↗' : '\u05de\u05d7\u05d9\u05e8 \u2197');
+  } else {
+    var searchQ = encodeURIComponent(item.name.replace(/[\u0590-\u05FF]+\s*/g, '').trim() || item.name);
+    priceUrl = 'https://yamitysb.co.il/?s=' + searchQ + '&post_type=product';
+    priceBtnLabel = '\u05de\u05d7\u05d9\u05e8 \u2197';
+  }
+  var priceBtn = '<a class="price-btn" href="' + priceUrl + '" target="_blank" rel="noopener">' + priceBtnLabel + '</a>';
 
   var footHtml = '<div class="cfoot">' +
     '<div class="reason">' + esc(reason) + '</div>' +
@@ -533,7 +568,9 @@ async function doLoad() {
     var f = pendingFiles[idx];
     try {
       var text = await readFileAsText(f);
-      var items = parseCSV(text, f.name);
+      var items = f.name.toLowerCase().endsWith('.json')
+        ? parseScrapedJSON(text)
+        : parseCSV(text, f.name);
       var ns = items.filter(function(x) { return x.in_stock; }).length;
       allItems = allItems.concat(items);
       statuses.push({ name: f.name, count: items.length, ns: ns, ok: true });
