@@ -555,9 +555,8 @@ function buildCard(result) {
   if (item.sku) tagsHtml += '<span class="tag">' + esc(item.sku) + '</span>';
   if (item.alt) tagsHtml += '<span class="tag">' + esc(item.alt) + '</span>';
 
-  // URL: sitemap direct link (best) → prices.json url → site search fallback
-  var sitemapUrl  = findProductUrl(item.name);
-  var priceMatch  = findPrice(item.name);
+  var sitemapUrl = findProductUrl(item.name);
+  var priceMatch = findPrice(item.name);
   var priceDisplay = '';
   if (priceMatch && priceMatch.low !== null) {
     var lo = Math.round(priceMatch.low).toLocaleString('he-IL');
@@ -566,8 +565,11 @@ function buildCard(result) {
       ? '\u20aa' + lo + '\u2013\u20aa' + hi
       : '\u20aa' + lo;
   }
-  var linkUrl = sitemapUrl
-    || (priceMatch && priceMatch.url)
+  // When a price is shown, link to the SAME page that was priced so the user
+  // can validate inline price matches what the store shows (not a different year).
+  // Sitemap URL is used only when there's no price match (best direct URL available).
+  var linkUrl = (priceMatch && priceMatch.url)
+    || sitemapUrl
     || ('https://yamitysb.co.il/?s=' + encodeURIComponent(item.name.replace(/[\u0590-\u05FF]+\s*/g, '').trim() || item.name) + '&post_type=product');
   var priceBtn = '<a class="price-btn" href="' + esc(linkUrl) + '" target="_blank" rel="noopener">\u05de\u05d7\u05d9\u05e8 \u2197</a>';
   var priceHtml = priceDisplay ? '<span class="price-tag">' + esc(priceDisplay) + '</span>' : '';
