@@ -96,10 +96,16 @@ body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webk
 .cfoot { padding-top: 9px; border-top: 1px solid var(--bdr); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .reason { font-size: 11px; color: var(--mut); font-style: italic; flex: 1; }
 .price-btn { font-size: 11px; color: var(--acc); background: var(--acc-d); border: 1px solid var(--acc-m); border-radius: 6px; padding: 4px 10px; white-space: nowrap; text-decoration: none; flex-shrink: 0; }
+.price-tag { font-size: 12px; font-weight: 700; color: var(--acc); flex-shrink: 0; }
 .sk { background: var(--surf); border: 1px solid var(--bdr); border-radius: 13px; padding: 14px; }
 .skb { background: var(--surf2); border-radius: 4px; margin-bottom: 8px; }
 @keyframes pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
 .sk { animation: pulse 1.3s infinite; }
+.inv-status { background: var(--surf); border: 1px solid var(--acc-m); border-radius: 10px; padding: 11px 14px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+.inv-status-info { font-size: 13px; }
+.inv-status-info strong { color: var(--acc); }
+.inv-status-info small { display: block; font-size: 11px; color: var(--mut); margin-top: 2px; }
+.inv-status-go { font-size: 12px; color: var(--acc); background: var(--acc-d); border: 1px solid var(--acc-m); border-radius: 6px; padding: 5px 11px; cursor: pointer; white-space: nowrap; }
 .empty { text-align: center; padding: 48px 20px; }
 .empty .ico { font-size: 38px; margin-bottom: 12px; }
 .empty h3 { font-size: 17px; font-weight: 700; margin-bottom: 7px; }
@@ -133,6 +139,7 @@ body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webk
 <div class="scr show" id="scrUpload">
   <div class="upwrap">
     <h2>טעינת מלאי</h2>
+    <div id="currentInvStatus"></div>
     <p>בחר קבצי CSV מיוצאים מחישובית (KITE, WINDSURF, WING, KAYAKS). ניתן לבחור מספר קבצים בבת אחת.</p>
     <div class="dz" id="dz">
       <input type="file" id="fileInput" accept=".csv" multiple>
@@ -177,8 +184,9 @@ body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webk
 // API headers confirmed from Spike 3.
 var CLAUDE_MODEL  = 'claude-haiku-4-5-20251001';
 var CLAUDE_URL    = 'https://api.anthropic.com/v1/messages';
-var STORAGE_INV   = 'yamit_inv';
-var STORAGE_KEY   = 'yamit_key';
+var STORAGE_INV     = 'yamit_inv';
+var STORAGE_KEY     = 'yamit_key';
+var STORAGE_UPDATED = 'yamit_updated';
 var COL_SKU  = 2;
 var COL_NAME = 3;
 var COL_ALT  = 4;
@@ -262,21 +270,45 @@ function splitCSVLine(line) {
   return cols;
 }
 
+// ── PRICES (loaded async from prices.json) ──
+var PRICES = null;
+
+fetch('prices.json').then(function(r) { return r.json(); }).then(function(p) {
+  PRICES = p;
+}).catch(function() { /* prices.json unavailable — fallback to site search */ });
+
+// Extract normalized English key from a product name (mirrors build_prices.py logic)
+var PRICE_SKIP = new Set(['the','and','for','ltd','sot','dtk','txt','hrs','pro','max','air','one','neo','new']);
+function findPrice(itemName) {
+  var cleaned = itemName.replace(/[\/\-]/g, ' ');
+  var words = (cleaned.match(/[A-Za-z]{2,}/g) || [])
+    .map(function(w) { return w.toLowerCase(); })
+    .filter(function(w) { return !PRICE_SKIP.has(w); });
+  if (!words.length || !PRICES) return null;
+  // Try progressively shorter prefix combinations
+  for (var len = words.length; len >= 1; len--) {
+    var key = words.slice(0, len).join(' ');
+    if (PRICES[key]) return PRICES[key];
+  }
+  return null;
+}
+
 // ── STORE (T2) ──
 var INV = [];
 
-function setInventory(items) {
+function setInventory(items, updatedTs) {
   INV = items;
-  saveToStorage(items);
+  saveToStorage(items, updatedTs || new Date().toISOString());
   updateBadge();
 }
 
-function saveToStorage(items) {
+function saveToStorage(items, updatedTs) {
   try {
     var compact = items.map(function(x) {
       return { n: x.name, s: x.sku, a: x.alt, c: x.cat, q: x.qty, i: x.in_stock ? 1 : 0 };
     });
     localStorage.setItem(STORAGE_INV, JSON.stringify(compact));
+    if (updatedTs) localStorage.setItem(STORAGE_UPDATED, updatedTs);
   } catch(e) { /* quota exceeded or private mode — non-fatal */ }
 }
 
@@ -292,12 +324,22 @@ function loadFromStorage() {
   } catch(e) { INV = []; return false; }
 }
 
+function getStoredUpdated() {
+  return localStorage.getItem(STORAGE_UPDATED) || null;
+}
+
 function updateBadge() {
   var total = INV.length;
   var inStock = INV.filter(function(x) { return x.in_stock; }).length;
   var el = document.getElementById('badge');
   if (total) {
-    el.textContent = inStock + '/' + total;
+    var ts = getStoredUpdated();
+    var age = '';
+    if (ts) {
+      var days = Math.floor((Date.now() - new Date(ts).getTime()) / 86400000);
+      age = days === 0 ? ' \u00b7 היום' : ' \u00b7 ' + days + 'd';
+    }
+    el.textContent = inStock + '/' + total + age;
     el.className = 'badge on';
   } else {
     el.textContent = '\u05d0\u05d9\u05df \u05de\u05dc\u05d0\u05d9';
@@ -452,12 +494,28 @@ function buildCard(result) {
   if (item.sku) tagsHtml += '<span class="tag">' + esc(item.sku) + '</span>';
   if (item.alt) tagsHtml += '<span class="tag">' + esc(item.alt) + '</span>';
 
-  var searchQ = encodeURIComponent(item.name.replace(/[\u0590-\u05FF]+\s*/g, '').trim() || item.name);
-  var priceUrl = 'https://yamitysb.co.il/?s=' + searchQ + '&post_type=product';
-  var priceBtn = '<a class="price-btn" href="' + priceUrl + '" target="_blank" rel="noopener">\u05deחיר ↗</a>';
+  var priceMatch = findPrice(item.name);
+  var priceDisplay = '';
+  var linkUrl;
+  if (priceMatch) {
+    linkUrl = priceMatch.url;
+    if (priceMatch.low !== null) {
+      var lo = Math.round(priceMatch.low).toLocaleString('he-IL');
+      var hi = Math.round(priceMatch.high).toLocaleString('he-IL');
+      priceDisplay = priceMatch.high !== priceMatch.low
+        ? '\u20aa' + lo + '\u2013\u20aa' + hi
+        : '\u20aa' + lo;
+    }
+  } else {
+    var searchQ = encodeURIComponent(item.name.replace(/[\u0590-\u05FF]+\s*/g, '').trim() || item.name);
+    linkUrl = 'https://yamitysb.co.il/?s=' + searchQ + '&post_type=product';
+  }
+  var priceBtn = '<a class="price-btn" href="' + esc(linkUrl) + '" target="_blank" rel="noopener">\u05de\u05d7\u05d9\u05e8 \u2197</a>';
+  var priceHtml = priceDisplay ? '<span class="price-tag">' + esc(priceDisplay) + '</span>' : '';
 
   var footHtml = '<div class="cfoot">' +
     '<div class="reason">' + esc(reason) + '</div>' +
+    priceHtml +
     priceBtn +
     '</div>';
 
@@ -644,6 +702,26 @@ async function doSearch() {
 function showUpload() {
   document.getElementById('scrUpload').classList.add('show');
   document.getElementById('scrSearch').classList.remove('show');
+  renderCurrentInvStatus();
+}
+
+function renderCurrentInvStatus() {
+  var el = document.getElementById('currentInvStatus');
+  if (!INV.length) { el.innerHTML = ''; return; }
+  var inStock = INV.filter(function(x) { return x.in_stock; }).length;
+  var ts = getStoredUpdated();
+  var age = '';
+  if (ts) {
+    var days = Math.floor((Date.now() - new Date(ts).getTime()) / 86400000);
+    age = days === 0 ? 'עודכן היום' : 'עודכן לפני ' + days + ' ימים';
+  }
+  el.innerHTML = '<div class="inv-status">' +
+    '<div class="inv-status-info">' +
+      '<strong>' + INV.length + ' פריטים במלאי</strong>' +
+      '<small>' + inStock + ' זמינים · ' + esc(age) + '</small>' +
+    '</div>' +
+    '<div class="inv-status-go" onclick="showSearch()">חזור לחיפוש ←</div>' +
+  '</div>';
 }
 
 function showSearch() {
@@ -653,12 +731,27 @@ function showSearch() {
 }
 
 (function init() {
-  if (loadFromStorage()) {
-    updateBadge();
-    showSearch();
-  } else {
-    showUpload();
-  }
+  var hasLocal = loadFromStorage();
+  if (hasLocal) { updateBadge(); showSearch(); }
+
+  // Fetch inventory.json from GitHub Pages in the background.
+  // If it's newer than what's in localStorage, replace silently.
+  fetch('inventory.json').then(function(r) { return r.json(); }).then(function(data) {
+    if (!data || !data.items || !data.items.length) return;
+    var remoteTs = data.updated || '';
+    var localTs  = getStoredUpdated() || '';
+    // Update if remote is newer, or if we had nothing locally
+    if (!hasLocal || remoteTs > localTs) {
+      var items = data.items.map(function(x) {
+        return { name: x.n, sku: x.s, alt: x.a, cat: x.c, qty: x.q, in_stock: !!x.i };
+      });
+      setInventory(items, remoteTs);
+      if (!hasLocal) showSearch();
+    }
+  }).catch(function() {
+    // inventory.json not available (local dev, or not yet pushed) — that's fine
+    if (!hasLocal) showUpload();
+  });
 })();
 </script>
 </body>
