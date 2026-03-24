@@ -99,6 +99,7 @@ body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webk
 .price-tag { font-size: 12px; font-weight: 700; color: var(--acc); flex-shrink: 0; }
 .search-btn { color: var(--mut); background: var(--surf2); border-color: var(--bdr); }
 .sib-note { font-size: 10px; color: var(--acc); opacity: .8; padding: 3px 0 6px; line-height: 1.5; }
+.cat-header { font-size: 10px; font-family: var(--mono); color: var(--mut); padding: 12px 2px 3px; border-top: 1px solid var(--bdr); margin-top: 2px; }
 .sk { background: var(--surf); border: 1px solid var(--bdr); border-radius: 13px; padding: 14px; }
 .skb { background: var(--surf2); border-radius: 4px; margin-bottom: 8px; }
 @keyframes pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
@@ -446,13 +447,24 @@ document.getElementById('settingsOv').addEventListener('click', function(e) {
 
 // ── PREFILTER (T3) ──
 var TRANS = {
-  '\u05d0\u05d9\u05d1\u05d5':'evo',   'evo':'\u05d0\u05d9\u05d1\u05d5',
-  '\u05e8\u05d9\u05d1\u05dc':'rebel', 'rebel':'\u05e8\u05d9\u05d1\u05dc',
-  '\u05e0\u05d0\u05d5':'neo',         'neo':'\u05e0\u05d0\u05d5',
-  '\u05d3\u05d9\u05d9\u05e1':'dice',  'dice':'\u05d3\u05d9\u05d9\u05e1',
-  '\u05d5\u05e0\u05d2\u05e1':'vegas', 'vegas':'\u05d5\u05e0\u05d2\u05e1',
-  '\u05d5\u05d0\u05dd':'wam',         'wam':'\u05d5\u05d0\u05dd',
+  // Kite brands
+  '\u05d0\u05d9\u05d1\u05d5':'evo',       'evo':'\u05d0\u05d9\u05d1\u05d5',
+  '\u05e8\u05d9\u05d1\u05dc':'rebel',     'rebel':'\u05e8\u05d9\u05d1\u05dc',
+  '\u05e0\u05d0\u05d5':'neo',             'neo':'\u05e0\u05d0\u05d5',
+  '\u05d3\u05d9\u05d9\u05e1':'dice',      'dice':'\u05d3\u05d9\u05d9\u05e1',
+  '\u05d5\u05e0\u05d2\u05e1':'vegas',     'vegas':'\u05d5\u05e0\u05d2\u05e1',
+  '\u05d5\u05d0\u05dd':'wam',             'wam':'\u05d5\u05d0\u05dd',
   '\u05d2\u05d5\u05e0\u05d6\u05dc\u05e1':'gonzales', 'gonzales':'\u05d2\u05d5\u05e0\u05d6\u05dc\u05e1',
+  // Wing brands
+  '\u05d9\u05d5\u05e0\u05d9\u05d8':'unit',     'unit':'\u05d9\u05d5\u05e0\u05d9\u05d8',
+  '\u05e1\u05dc\u05d9\u05e7':'slick',     'slick':'\u05e1\u05dc\u05d9\u05e7',
+  '\u05d5\u05e0\u05d8\u05d9\u05e1':'ventis',   'ventis':'\u05d5\u05e0\u05d8\u05d9\u05e1',
+  '\u05e4\u05dc\u05d5\u05d0\u05d8':'float',    'float':'\u05e4\u05dc\u05d5\u05d0\u05d8',
+  // Windsurf board brand
+  '\u05d2\u05e7\u05d5':'gecko',           'gecko':'\u05d2\u05e7\u05d5',
+  // Kayak brands
+  '\u05e0\u05dc\u05d5':'nelo',            'nelo':'\u05e0\u05dc\u05d5',
+  '\u05d1\u05e8\u05e7\u05d4':'braca',     'braca':'\u05d1\u05e8\u05e7\u05d4',
 };
 var NUM_WORDS = {
   '\u05d0\u05d7\u05d3':'1','\u05e9\u05ea\u05d9\u05d9\u05dd':'2','\u05e9\u05dc\u05d5\u05e9':'3',
@@ -515,12 +527,24 @@ async function claudeSearch(query, candidates, apiKey) {
   var system = 'You are an inventory search assistant for an Israeli water sports store (Yamit).\n' +
     'Match the query to the best items. Return ONLY a JSON array, no other text.\n' +
     'Each element: {"idx":<number>,"score":<0.0-1.0>,"reason":"<brief Hebrew>"}\n' +
-    'Max ' + RES_MAX + ' results. Min score ' + RES_MIN_SCORE + '. Prefer in-stock items (\u2713).\n\n' +
-    'Domain: EVO=\u05d0\u05d9\u05d1\u05d5, REBEL=\u05e8\u05d9\u05d1\u05dc, NEO=\u05e0\u05d0\u05d5, ' +
-    'DICE=\u05d3\u05d9\u05d9\u05e1, GONZALES=\u05d2\u05d5\u05e0\u05d6\u05dc\u05e1\n' +
-    'Kite sizes meters: 7-14. Board cm: 132-153. Ft: 4\'6-5\'11\n' +
-    'Hebrew nums: \u05e2\u05e9\u05e8=10, \u05ea\u05e9\u05e2=9, \u05e9\u05ea\u05d9\u05dd \u05e2\u05e9\u05e8\u05d4=12\n' +
-    '\u05db\u05d7\u05d5\u05dc=blue, \u05d0\u05d3\u05d5\u05dd=red, \u05dc\u05d1\u05df=white, \u05d0\u05e4\u05d5\u05e8=gray';
+    'Max ' + RES_MAX + ' results. Min score ' + RES_MIN_SCORE + '. Prefer in-stock (\u2713) items.\n\n' +
+    'BRANDS:\n' +
+    'Kite: EVO=\u05d0\u05d9\u05d1\u05d5 NEO=\u05e0\u05d0\u05d5 REBEL=\u05e8\u05d9\u05d1\u05dc DICE=\u05d3\u05d9\u05d9\u05e1 GONZALES=\u05d2\u05d5\u05e0\u05d6\u05dc\u05e1 VEGAS=\u05d5\u05e0\u05d2\u05e1\n' +
+    'Wing: UNIT=\u05d9\u05d5\u05e0\u05d9\u05d8 SLICK=\u05e1\u05dc\u05d9\u05e7 VENTIS=\u05d5\u05e0\u05d8\u05d9\u05e1 FLOAT=\u05e4\u05dc\u05d5\u05d0\u05d8\n' +
+    'Windsurf: GECKO=\u05d2\u05e7\u05d5 | Kayak: NELO=\u05e0\u05dc\u05d5 BRACA=\u05d1\u05e8\u05e7\u05d4\n\n' +
+    'MODEL TIERS (Duotone): D/LAB=premium > SLS=high-end > Original=standard (same product line, diff quality/price)\n\n' +
+    'PRODUCT TYPES:\n' +
+    '\u05d7\u05d5\u05e4\u05d4=kite-canopy | \u05db\u05e0\u05e3/\u05db\u05e0\u05e3-\u05d2\u05dc\u05d9\u05e9\u05d4=wing | \u05d2\u05dc\u05e9\u05df-\u05e8\u05d5\u05d7=windsurf-board | \u05de\u05e4\u05e8\u05e9=sail | \u05ea\u05d5\u05e8\u05df=mast\n' +
+    '\u05d8\u05d9\u05d5\u05d1\u05d4=bladder/spare-part | \u05e4\u05d5\u05d9\u05dc=hydrofoil | \u05de\u05e9\u05d5\u05d8=paddle | \u05e7\u05d9\u05d0\u05e7=kayak | \u05d2\u05dc\u05e9\u05df=board\n' +
+    '\u05d7\u05e6\u05d0\u05d9\u05ea=sprayskirt | \u05d0\u05e4\u05d5\u05d3\u05d4=life-vest | \u05dc\u05d9\u05e9=leash | \u05de\u05d9\u05d9\u05e6\u05d1=stabilizer\n\n' +
+    'SIZES:\n' +
+    '\u05d7\u05d5\u05e4\u05d4/kite: 7\u201315 m | \u05db\u05e0\u05e3/wing: 2\u20138 sqm | FOIL-WING: 400\u20131400 cm\u00b2 (e.g. 650, 925 \u2014 NOT sqm!)\n' +
+    '\u05d2\u05dc\u05e9\u05df-\u05e8\u05d5\u05d7/board: 68\u2013180 L | \u05de\u05e4\u05e8\u05e9/sail: 2.5\u20138.8 sqm | \u05ea\u05d5\u05e8\u05df/mast: 290\u2013460 cm\n' +
+    'Kayak vol: MV=mid LV=low HV=high | Clothing: XS S M L XL XXL\n\n' +
+    'COLORS: B=\u05db\u05d7\u05d5\u05dc C=\u05d0\u05d3\u05d5\u05dd W=\u05dc\u05d1\u05df G=\u05d0\u05e4\u05d5\u05e8 Y=\u05e6\u05d4\u05d5\u05d1 O=\u05db\u05ea\u05d5\u05dd M=\u05de\u05e0\u05d8\u05d4 P=\u05d5\u05e8\u05d5\u05d3 V=\u05d5\u05e0\u05d9\u05dc\n\n' +
+    'INTENT: brand+size query \u2192 prefer main-category over \u05e9\u05d5\u05e0\u05d5\u05ea;\n' +
+    'component query (\u05d8\u05d9\u05d5\u05d1\u05d4,\u05dc\u05d9\u05e9,\u05de\u05d1\u05e8\u05d2,\u05d9\u05d3\u05d9\u05ea,\u05d7\u05e6\u05d0\u05d9\u05ea,\u05d7\u05d1\u05dc,\u05e1\u05e7\u05e8\u05d4) \u2192 all categories equal\n\n' +
+    'Hebrew nums: \u05d0\u05d7\u05d3=1 \u05e9\u05ea\u05d9\u05d9\u05dd=2 \u05e9\u05dc\u05d5\u05e9=3 \u05d0\u05e8\u05d1\u05e2=4 \u05d7\u05de\u05e9=5 \u05e9\u05e9=6 \u05e9\u05d1\u05e2=7 \u05e9\u05de\u05d5\u05e0\u05d4=8 \u05ea\u05e9\u05e2=9 \u05e2\u05e9\u05e8=10 \u05d0\u05d7\u05d3-\u05e2\u05e9\u05e8=11 \u05e9\u05ea\u05d9\u05d9\u05dd-\u05e2\u05e9\u05e8\u05d4=12 \u05e9\u05dc\u05d5\u05e9-\u05e2\u05e9\u05e8\u05d4=13';
 
   var resp = await fetch(CLAUDE_URL, {
     method: 'POST',
@@ -627,6 +651,27 @@ function buildCard(result) {
     sibHtml +
     footHtml +
     '</div>';
+}
+
+// Group results by item.cat and render category headers when 2+ categories present.
+// Group order follows first appearance (highest-scored item per category comes first).
+function buildGroupedResults(results) {
+  var groupOrder = [], groupMap = {};
+  results.forEach(function(r) {
+    var cat = r.item.cat;
+    if (!groupMap[cat]) { groupMap[cat] = []; groupOrder.push(cat); }
+    groupMap[cat].push(r);
+  });
+  var html = '<div class="rlist">';
+  if (groupOrder.length <= 1) {
+    html += results.map(buildCard).join('');
+  } else {
+    groupOrder.forEach(function(cat) {
+      html += '<div class="cat-header">' + esc(cat) + '</div>';
+      html += groupMap[cat].map(buildCard).join('');
+    });
+  }
+  return html + '</div>';
 }
 
 function buildSkeletons(n) {
@@ -786,8 +831,7 @@ async function doSearch() {
     if (!results.length) {
       rl.innerHTML = buildEmpty('\ud83e\udd37', '\u05d0\u05d9\u05df \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea', '\u05e0\u05e1\u05d4: EVO 10, \u05e8\u05d9\u05d1\u05dc 9, \u05e7\u05d9\u05d0\u05e7, wing foil');
     } else {
-      var html = '<div class="rlist">' + results.map(buildCard).join('') + '</div>';
-      rl.innerHTML = html;
+      rl.innerHTML = buildGroupedResults(results);
     }
 
   } catch(e) {
