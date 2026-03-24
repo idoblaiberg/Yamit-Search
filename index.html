@@ -278,19 +278,80 @@ fetch('prices.json').then(function(r) { return r.json(); }).then(function(p) {
 }).catch(function() { /* prices.json unavailable — fallback to site search */ });
 
 // Extract normalized English key from a product name (mirrors build_prices.py logic)
-var PRICE_SKIP = new Set(['the','and','for','ltd','sot','dtk','txt','hrs','pro','max','air','one','neo','new']);
+var PRICE_SKIP = new Set(['the','and','for','ltd','sot','dtk','txt','hrs','pro','max','air','one','new']);
 function findPrice(itemName) {
   var cleaned = itemName.replace(/[\/\-]/g, ' ');
   var words = (cleaned.match(/[A-Za-z]{2,}/g) || [])
     .map(function(w) { return w.toLowerCase(); })
     .filter(function(w) { return !PRICE_SKIP.has(w); });
   if (!words.length || !PRICES) return null;
+  // Mirror scraper key quality gate: require 1 word ≥3 chars OR 2+ words
+  var hasLongWord = words.some(function(w) { return w.length >= 3; });
+  if (!hasLongWord && words.length < 2) return null;
   // Try progressively shorter prefix combinations
   for (var len = words.length; len >= 1; len--) {
     var key = words.slice(0, len).join(' ');
     if (PRICES[key]) return PRICES[key];
   }
   return null;
+}
+
+// ── SITEMAP INDEX (loaded async from sitemap_index.json) ──
+var SITEMAP = null;
+
+fetch('sitemap_index.json').then(function(r) { return r.json(); }).then(function(d) {
+  SITEMAP = d.entries;
+}).catch(function() { /* sitemap_index.json unavailable — fallback to site search */ });
+
+// Tokens to skip when building slug-match tokens (short words that appear everywhere)
+var URL_SKIP = new Set(['dtk','txt','air','one','ii','iii','iv']);
+
+function findProductUrl(itemName) {
+  if (!SITEMAP) return null;
+  // Normalize: strip leading *, expand D/LAB → DLAB for token extraction
+  var cleaned = itemName.replace(/^[*]+/, '').replace(/D[\/\\]LAB/gi, 'DLAB').trim();
+
+  // English tokens (2+ chars, not in skip list)
+  var engTokens = (cleaned.match(/[A-Za-z]{2,}/g) || [])
+    .map(function(w) { return w.toLowerCase(); })
+    .filter(function(w) { return !URL_SKIP.has(w); });
+  if (!engTokens.length) return null;
+
+  // Expand DLAB → also 'd' + 'lab' (slug encodes as "d lab")
+  var allEng = [];
+  engTokens.forEach(function(w) {
+    allEng.push(w);
+    if (w === 'dlab') { allEng.push('d'); allEng.push('lab'); }
+  });
+
+  // Numeric tokens with year/size expansions
+  var nums = [];
+  (cleaned.match(/\d+(?:\.\d+)?/g) || []).forEach(function(n) {
+    nums.push(n);
+    if (/^\d{2}$/.test(n) && +n >= 19 && +n <= 30) nums.push('20' + n); // 21 → 2021
+    if (/^0\d$/.test(n)) nums.push(String(parseInt(n, 10)));             // 07 → 7
+    if (/^\d+\.\d+$/.test(n)) {                                          // 4.0 → '4','0'
+      var p = n.split('.'); nums.push(p[0]); nums.push(p[1]);
+    }
+  });
+
+  // Score each sitemap entry — whole-word match only
+  function matchWord(slug, tok) {
+    var idx = slug.indexOf(tok);
+    if (idx < 0) return false;
+    var before = idx === 0 || slug[idx - 1] === ' ';
+    var after  = idx + tok.length === slug.length || slug[idx + tok.length] === ' ';
+    return before && after;
+  }
+
+  var best = null, bestScore = 0;
+  for (var i = 0; i < SITEMAP.length; i++) {
+    var slug = SITEMAP[i][0], score = 0;
+    allEng.forEach(function(w) { if (matchWord(slug, w)) score += 2; });
+    nums.forEach(function(n)   { if (matchWord(slug, n)) score += 1; });
+    if (score > bestScore) { bestScore = score; best = SITEMAP[i][1]; }
+  }
+  return bestScore >= 2 ? best : null;
 }
 
 // ── STORE (T2) ──
@@ -494,22 +555,20 @@ function buildCard(result) {
   if (item.sku) tagsHtml += '<span class="tag">' + esc(item.sku) + '</span>';
   if (item.alt) tagsHtml += '<span class="tag">' + esc(item.alt) + '</span>';
 
-  var priceMatch = findPrice(item.name);
+  // URL: sitemap direct link (best) → prices.json url → site search fallback
+  var sitemapUrl  = findProductUrl(item.name);
+  var priceMatch  = findPrice(item.name);
   var priceDisplay = '';
-  var linkUrl;
-  if (priceMatch) {
-    linkUrl = priceMatch.url;
-    if (priceMatch.low !== null) {
-      var lo = Math.round(priceMatch.low).toLocaleString('he-IL');
-      var hi = Math.round(priceMatch.high).toLocaleString('he-IL');
-      priceDisplay = priceMatch.high !== priceMatch.low
-        ? '\u20aa' + lo + '\u2013\u20aa' + hi
-        : '\u20aa' + lo;
-    }
-  } else {
-    var searchQ = encodeURIComponent(item.name.replace(/[\u0590-\u05FF]+\s*/g, '').trim() || item.name);
-    linkUrl = 'https://yamitysb.co.il/?s=' + searchQ + '&post_type=product';
+  if (priceMatch && priceMatch.low !== null) {
+    var lo = Math.round(priceMatch.low).toLocaleString('he-IL');
+    var hi = Math.round(priceMatch.high).toLocaleString('he-IL');
+    priceDisplay = priceMatch.high !== priceMatch.low
+      ? '\u20aa' + lo + '\u2013\u20aa' + hi
+      : '\u20aa' + lo;
   }
+  var linkUrl = sitemapUrl
+    || (priceMatch && priceMatch.url)
+    || ('https://yamitysb.co.il/?s=' + encodeURIComponent(item.name.replace(/[\u0590-\u05FF]+\s*/g, '').trim() || item.name) + '&post_type=product');
   var priceBtn = '<a class="price-btn" href="' + esc(linkUrl) + '" target="_blank" rel="noopener">\u05de\u05d7\u05d9\u05e8 \u2197</a>';
   var priceHtml = priceDisplay ? '<span class="price-tag">' + esc(priceDisplay) + '</span>' : '';
 
