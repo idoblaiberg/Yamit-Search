@@ -115,3 +115,22 @@ Result cards — name, stock qty, category, SKU, price range, store link
 ```
 
 > Must serve over HTTP (not `file://`) for `fetch()` calls to work.
+
+---
+
+## Contributing / making changes
+
+The entire app is in `index.html` — no build step, no dependencies to install. Edit the file and refresh the browser.
+
+**Before making changes**, read `CLAUDE.md` — it has a line-by-line structure map of `index.html` so you can jump directly to the right section without reading the whole file. Key targets:
+
+| Change | Where |
+|--------|-------|
+| Add a Hebrew↔English word pair | `index.html` line ~353 (`TRANS` object) |
+| Change Claude model | `index.html` line ~179 |
+| Adjust max results | `index.html` lines ~187–189 (`PRE_MAX`, `RES_MAX`) |
+| Card layout / price display | `index.html` lines ~467–512 (`buildCard`) |
+| Claude system prompt | `index.html` lines ~420–428 |
+| Add a search chip shortcut | `index.html` lines ~157–164 |
+
+**Deploying:** push `main` → GitHub Pages rebuilds automatically (1–2 min).
