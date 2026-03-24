@@ -97,6 +97,8 @@ body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webk
 .reason { font-size: 11px; color: var(--mut); font-style: italic; flex: 1; }
 .price-btn { font-size: 11px; color: var(--acc); background: var(--acc-d); border: 1px solid var(--acc-m); border-radius: 6px; padding: 4px 10px; white-space: nowrap; text-decoration: none; flex-shrink: 0; }
 .price-tag { font-size: 12px; font-weight: 700; color: var(--acc); flex-shrink: 0; }
+.search-btn { color: var(--mut); background: var(--surf2); border-color: var(--bdr); }
+.sib-note { font-size: 10px; color: var(--acc); opacity: .8; padding: 3px 0 6px; line-height: 1.5; }
 .sk { background: var(--surf); border: 1px solid var(--bdr); border-radius: 13px; padding: 14px; }
 .skb { background: var(--surf2); border-radius: 4px; margin-bottom: 8px; }
 @keyframes pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
@@ -357,6 +359,20 @@ function findProductUrl(itemName) {
 // ── STORE (T2) ──
 var INV = [];
 
+// Find in-stock items that share the same product family (used for אזל sibling note).
+// Matches on ALL base English tokens (3+ chars) present in both names.
+function findSiblings(item) {
+  var tokens = (item.name.match(/[A-Za-z]{3,}/g) || [])
+    .map(function(w) { return w.toLowerCase(); })
+    .filter(function(w) { return !PRICE_SKIP.has(w); });
+  if (tokens.length < 1) return [];
+  return INV.filter(function(other) {
+    if (other === item || !other.in_stock) return false;
+    var lc = other.name.toLowerCase();
+    return tokens.every(function(t) { return lc.indexOf(t) >= 0; });
+  });
+}
+
 function setInventory(items, updatedTs) {
   INV = items;
   saveToStorage(items, updatedTs || new Date().toISOString());
@@ -555,24 +571,46 @@ function buildCard(result) {
   if (item.sku) tagsHtml += '<span class="tag">' + esc(item.sku) + '</span>';
   if (item.alt) tagsHtml += '<span class="tag">' + esc(item.alt) + '</span>';
 
-  var sitemapUrl = findProductUrl(item.name);
-  var priceMatch = findPrice(item.name);
+  var sitemapUrl  = findProductUrl(item.name);
+  var priceMatch  = findPrice(item.name);
+  var hasPrice    = !!(priceMatch && priceMatch.low !== null);
+  var hasPage     = !!(priceMatch || sitemapUrl);
+  var fallbackUrl = 'https://yamitysb.co.il/?s=' +
+      encodeURIComponent(item.name.replace(/[\u0590-\u05FF]+\s*/g, '').trim() || item.name) +
+      '&post_type=product';
+  // Link priority: priced page first (so price + link always show the same page),
+  // then sitemap URL (direct product page without price), then site search fallback.
+  var bestUrl = (priceMatch && priceMatch.url) || sitemapUrl || fallbackUrl;
+
+  // Scenario 1 & 2: price found — show ₪ range inline
   var priceDisplay = '';
-  if (priceMatch && priceMatch.low !== null) {
+  if (hasPrice) {
     var lo = Math.round(priceMatch.low).toLocaleString('he-IL');
     var hi = Math.round(priceMatch.high).toLocaleString('he-IL');
-    priceDisplay = priceMatch.high !== priceMatch.low
-      ? '\u20aa' + lo + '\u2013\u20aa' + hi
-      : '\u20aa' + lo;
+    priceDisplay = priceMatch.high !== priceMatch.low ? '\u20aa' + lo + '\u2013\u20aa' + hi : '\u20aa' + lo;
   }
-  // When a price is shown, link to the SAME page that was priced so the user
-  // can validate inline price matches what the store shows (not a different year).
-  // Sitemap URL is used only when there's no price match (best direct URL available).
-  var linkUrl = (priceMatch && priceMatch.url)
-    || sitemapUrl
-    || ('https://yamitysb.co.il/?s=' + encodeURIComponent(item.name.replace(/[\u0590-\u05FF]+\s*/g, '').trim() || item.name) + '&post_type=product');
-  var priceBtn = '<a class="price-btn" href="' + esc(linkUrl) + '" target="_blank" rel="noopener">\u05de\u05d7\u05d9\u05e8 \u2197</a>';
+
+  // Button label and style vary by scenario:
+  // 1: in stock + price  → "מחיר ↗" (green)
+  // 2: אזל   + price     → "מחיר ↗" (green)
+  // 3: in stock + page   → "לחנות ↗" (green)
+  // 4: no page found     → "חיפוש ↗" (muted)
+  var btnLabel = hasPrice ? '\u05de\u05d7\u05d9\u05e8 \u2197' : hasPage ? '\u05dc\u05d7\u05e0\u05d5\u05ea \u2197' : '\u05d7\u05d9\u05e4\u05d5\u05e9 \u2197';
+  var btnClass  = hasPage ? 'price-btn' : 'price-btn search-btn';
+
+  // Sibling note for אזל items — find in-stock variants of same product in INV
+  var sibHtml = '';
+  if (!item.in_stock) {
+    var sibs = findSiblings(item);
+    if (sibs.length > 0) {
+      var sibNames = sibs.slice(0, 3).map(function(s) { return esc(s.name); }).join(', ');
+      if (sibs.length > 3) sibNames += ' +' + (sibs.length - 3);
+      sibHtml = '<div class="sib-note">\u05d2\u05dd \u05d1\u05de\u05dc\u05d0\u05d9: ' + sibNames + '</div>';
+    }
+  }
+
   var priceHtml = priceDisplay ? '<span class="price-tag">' + esc(priceDisplay) + '</span>' : '';
+  var priceBtn  = '<a class="' + btnClass + '" href="' + esc(bestUrl) + '" target="_blank" rel="noopener">' + btnLabel + '</a>';
 
   var footHtml = '<div class="cfoot">' +
     '<div class="reason">' + esc(reason) + '</div>' +
@@ -586,6 +624,7 @@ function buildCard(result) {
       '<div class="pill ' + cls + '">' + pill + '</div>' +
     '</div>' +
     '<div class="tags">' + tagsHtml + '</div>' +
+    sibHtml +
     footHtml +
     '</div>';
 }
