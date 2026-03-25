@@ -465,6 +465,10 @@ var TRANS = {
   // Kayak brands
   '\u05e0\u05dc\u05d5':'nelo',            'nelo':'\u05e0\u05dc\u05d5',
   '\u05d1\u05e8\u05e7\u05d4':'braca',     'braca':'\u05d1\u05e8\u05e7\u05d4',
+  // Kayak model synonyms (critical: surfski boat = SCORPIO, not paddles)
+  '\u05e1\u05e8\u05e4\u05e1\u05e7\u05d9':'scorpio', 'scorpio':'\u05e1\u05e8\u05e4\u05e1\u05e7\u05d9',
+  // Kite accessories
+  '\u05d8\u05e8\u05e4\u05d6':'harness',   'harness':'\u05d8\u05e8\u05e4\u05d6',
 };
 var NUM_WORDS = {
   '\u05d0\u05d7\u05d3':'1','\u05e9\u05ea\u05d9\u05d9\u05dd':'2','\u05e9\u05dc\u05d5\u05e9':'3',
@@ -525,25 +529,46 @@ async function claudeSearch(query, candidates, apiKey) {
   }).join('\n');
 
   var system = 'You are an inventory search assistant for an Israeli water sports store (Yamit).\n' +
-    'Match the query to the best items. Return ONLY a JSON array, no other text.\n' +
-    'Each element: {"idx":<number>,"score":<0.0-1.0>,"reason":"<brief Hebrew>"}\n' +
-    'Max ' + RES_MAX + ' results. Min score ' + RES_MIN_SCORE + '. Prefer in-stock (\u2713) items.\n\n' +
-    'BRANDS:\n' +
-    'Kite: EVO=\u05d0\u05d9\u05d1\u05d5 NEO=\u05e0\u05d0\u05d5 REBEL=\u05e8\u05d9\u05d1\u05dc DICE=\u05d3\u05d9\u05d9\u05e1 GONZALES=\u05d2\u05d5\u05e0\u05d6\u05dc\u05e1 VEGAS=\u05d5\u05e0\u05d2\u05e1\n' +
-    'Wing: UNIT=\u05d9\u05d5\u05e0\u05d9\u05d8 SLICK=\u05e1\u05dc\u05d9\u05e7 VENTIS=\u05d5\u05e0\u05d8\u05d9\u05e1 FLOAT=\u05e4\u05dc\u05d5\u05d0\u05d8\n' +
-    'Windsurf: GECKO=\u05d2\u05e7\u05d5 | Kayak: NELO=\u05e0\u05dc\u05d5 BRACA=\u05d1\u05e8\u05e7\u05d4\n\n' +
-    'MODEL TIERS (Duotone): D/LAB=premium > SLS=high-end > Original=standard (same product line, diff quality/price)\n\n' +
+    'Return ONLY a JSON array. Format: [{"idx":<n>,"score":<0.0-1.0>,"reason":"<Hebrew>"}]\n' +
+    'Max ' + RES_MAX + ' results, min score ' + RES_MIN_SCORE + '. Prefer in-stock (\u2713).\n\n' +
+    'CATEGORY GUIDE (raw "cat" field in data):\n' +
+    'Kite canopies:\u05d7\u05d5\u05e4\u05d5\u05ea | Kite boards:KITE BOARDS | Kite bars:BAR | Kite harness:\u05d7\u05d2\u05d5\u05e8\u05d5\u05ea \u05d8\u05e8\u05e4\u05d6 | Kite spares:\u05d7\u05dc\u05e7\u05d9 \u05d7\u05d9\u05dc\u05d5\u05e3 \u05dc\u05e7\u05d9\u05d9\u05d8\n' +
+    'Wings:WING | Wing boards:WING BOARDS | Wing foil kits:WING FOIL\n' +
+    'Foil parts:HYDRO FOIL WINGS/FOIL MAST/FUSELAGE | Wing spares:WING \u05e9\u05d5\u05e0\u05d5\u05ea\n' +
+    'Windsurf boards:\u05d2\u05dc\u05e9\u05e0\u05d9 \u05e8\u05d5\u05d7 | Sails:\u05de\u05e4\u05e8\u05e9\u05d9 \u05d2\u05dc\u05d9\u05e9\u05ea \u05e8\u05d5\u05d7 | Masts:\u05ea\u05e8\u05e0\u05d9\u05dd\n' +
+    'Kayak BOATS:\u05e7\u05d9\u05d0\u05e7\u05d9\u05dd S.O.T / \u05e7\u05d9\u05d0\u05e7\u05d9\u05dd TOURING / \u05e7\u05d9\u05d0\u05e7\u05d9\u05dd \u05dc\u05de\u05d9\u05dd \u05e1\u05d5\u05e2\u05e8\u05d9\u05dd (these are BOATS)\n' +
+    'Kayak PADDLES (NOT boats):BRACA SURFSKI / BRACA TOURING / BRACA OLYMPIC / BRACA OUTRIGGER / BRACA SUP / \u05de\u05e9\u05d5\u05d8\u05d9\u05dd \u05dc\u05e7\u05d9\u05d0\u05e7\u05d9\u05dd\n\n' +
+    'MODELS BY SPORT:\n' +
+    'Kite canopies(Duotone): DICE EVO JUICE NEO REBEL VEGAS WAM GONZALES MONO SELECT SOLEIL SPECTRE\n' +
+    'Kite boards: GONZALES(twintip) PACE INDY FREE | Kite foil kits: SPIRIT BOOSTER SONAR ENTITY BLAZING\n' +
+    'Kite harness: JADE APEX(CURV/SELECT) ECHO B2 | Kite bar: CLICK-BAR TRUST-BAR\n' +
+    'Wing wings(Duotone): UNIT SLICK VENTIS FLOAT\n' +
+    'Wing boards: SKY-WING SKY-SURF SKYBRID DOWNWINDER\n' +
+    'Wing foil kits(Duotone): CARVE FREE (sizes in cm\u00b2: 500-1430) | Foil wings: AERO-CARVE AERO-FREE\n' +
+    'Windsurf boards(Fanatic): GECKO BLAST FREEWAVE FALCON SKATE STINGRAY STUBBY MAMBA JAG\n' +
+    'Windsurf sails: SUPER-HERO S.TYPE F.TYPE E.TYPE DRIVE DUKE E.PACE NOW SUPER-SESSION SUPER-STAR\n' +
+    'Windsurf masts: BLACK(100%) GOLD(90%) SILVER(70%) PLATINUM(carbon tiers)\n' +
+    'Kayak boats SOT: VELOCITY NEREUS CL370 CL470\n' +
+    'Kayak boats touring/surfski(NELO): SCORPIO=SURFSKI-KAYAK CETUS DELPHIN VIRGO LEO BIW S60 B66\n' +
+    'Kayak whitewater: BURN MACHNO REACTR LOKI JED STOUT RIPPER\n' +
+    'Kayak paddles: ROTOMOD WINNER BORA GENESIS ALUTEX ALPINA HURRICANE KINETIC BRACA\n\n' +
+    'MODEL TIERS(Duotone): D/LAB=premium > SLS=high-end > Original=standard\n\n' +
     'PRODUCT TYPES:\n' +
     '\u05d7\u05d5\u05e4\u05d4=kite-canopy | \u05db\u05e0\u05e3/\u05db\u05e0\u05e3-\u05d2\u05dc\u05d9\u05e9\u05d4=wing | \u05d2\u05dc\u05e9\u05df-\u05e8\u05d5\u05d7=windsurf-board | \u05de\u05e4\u05e8\u05e9=sail | \u05ea\u05d5\u05e8\u05df=mast\n' +
-    '\u05d8\u05d9\u05d5\u05d1\u05d4=bladder/spare-part | \u05e4\u05d5\u05d9\u05dc=hydrofoil | \u05de\u05e9\u05d5\u05d8=paddle | \u05e7\u05d9\u05d0\u05e7=kayak | \u05d2\u05dc\u05e9\u05df=board\n' +
-    '\u05d7\u05e6\u05d0\u05d9\u05ea=sprayskirt | \u05d0\u05e4\u05d5\u05d3\u05d4=life-vest | \u05dc\u05d9\u05e9=leash | \u05de\u05d9\u05d9\u05e6\u05d1=stabilizer\n\n' +
+    '\u05d8\u05d9\u05d5\u05d1\u05d4=bladder/spare | \u05e4\u05d5\u05d9\u05dc=hydrofoil | \u05de\u05e9\u05d5\u05d8=paddle | \u05e7\u05d9\u05d0\u05e7=kayak-BOAT | \u05d2\u05dc\u05e9\u05df=board\n' +
+    '\u05d7\u05e6\u05d0\u05d9\u05ea=sprayskirt | \u05d0\u05e4\u05d5\u05d3\u05d4=life-vest | \u05dc\u05d9\u05e9=leash | \u05d8\u05e8\u05e4\u05d6=harness | \u05d1\u05e8=kite-bar\n\n' +
     'SIZES:\n' +
-    '\u05d7\u05d5\u05e4\u05d4/kite: 7\u201315 m | \u05db\u05e0\u05e3/wing: 2\u20138 sqm | FOIL-WING: 400\u20131400 cm\u00b2 (e.g. 650, 925 \u2014 NOT sqm!)\n' +
-    '\u05d2\u05dc\u05e9\u05df-\u05e8\u05d5\u05d7/board: 68\u2013180 L | \u05de\u05e4\u05e8\u05e9/sail: 2.5\u20138.8 sqm | \u05ea\u05d5\u05e8\u05df/mast: 290\u2013460 cm\n' +
-    'Kayak vol: MV=mid LV=low HV=high | Clothing: XS S M L XL XXL\n\n' +
+    '\u05d7\u05d5\u05e4\u05d4/kite: 7\u201315 m | \u05db\u05e0\u05e3/wing: 2\u20138 sqm | FOIL-WING: 400\u20131400 cm\u00b2 (e.g. 650,925 \u2014 NOT sqm!)\n' +
+    '\u05d2\u05dc\u05e9\u05df-\u05e8\u05d5\u05d7: 68\u2013180 L | \u05de\u05e4\u05e8\u05e9/sail: 2.5\u20138.8 sqm | \u05ea\u05d5\u05e8\u05df/mast: 290\u2013460 cm\n' +
+    'Kayak: MV=mid LV=low HV=high | Clothing: XS S M L XL XXL\n\n' +
     'COLORS: B=\u05db\u05d7\u05d5\u05dc C=\u05d0\u05d3\u05d5\u05dd W=\u05dc\u05d1\u05df G=\u05d0\u05e4\u05d5\u05e8 Y=\u05e6\u05d4\u05d5\u05d1 O=\u05db\u05ea\u05d5\u05dd M=\u05de\u05e0\u05d8\u05d4 P=\u05d5\u05e8\u05d5\u05d3 V=\u05d5\u05e0\u05d9\u05dc\n\n' +
-    'INTENT: brand+size query \u2192 prefer main-category over \u05e9\u05d5\u05e0\u05d5\u05ea;\n' +
-    'component query (\u05d8\u05d9\u05d5\u05d1\u05d4,\u05dc\u05d9\u05e9,\u05de\u05d1\u05e8\u05d2,\u05d9\u05d3\u05d9\u05ea,\u05d7\u05e6\u05d0\u05d9\u05ea,\u05d7\u05d1\u05dc,\u05e1\u05e7\u05e8\u05d4) \u2192 all categories equal\n\n' +
+    'INTENT RULES (critical):\n' +
+    '\u05e7\u05d9\u05d0\u05e7 in query \u2192 PRIMARY=kayak BOAT; strongly prefer cat "\u05e7\u05d9\u05d0\u05e7\u05d9\u05dd*"; paddles are irrelevant unless query also has \u05de\u05e9\u05d5\u05d8\n' +
+    'SCORPIO=surfski KAYAK BOAT(not paddle!); \u05e1\u05e8\u05e4\u05e1\u05e7\u05d9 as boat=SCORPIO, as paddle=BRACA SURFSKI\n' +
+    'BRACA SURFSKI/TOURING/OLYMPIC/SUP/OUTRIGGER = PADDLES only\n' +
+    '\u05de\u05e9\u05d5\u05d8 in query \u2192 prefer paddle cats\n' +
+    'brand+size query \u2192 prefer main-category over \u05e9\u05d5\u05e0\u05d5\u05ea\n' +
+    'component query (\u05d8\u05d9\u05d5\u05d1\u05d4,\u05dc\u05d9\u05e9,\u05de\u05d1\u05e8\u05d2,\u05d9\u05d3\u05d9\u05ea,\u05d7\u05e6\u05d0\u05d9\u05ea,\u05d1\u05e8\u05d2,\u05d2\u05e8\u05d9\u05e4) \u2192 all cats equal\n\n' +
     'Hebrew nums: \u05d0\u05d7\u05d3=1 \u05e9\u05ea\u05d9\u05d9\u05dd=2 \u05e9\u05dc\u05d5\u05e9=3 \u05d0\u05e8\u05d1\u05e2=4 \u05d7\u05de\u05e9=5 \u05e9\u05e9=6 \u05e9\u05d1\u05e2=7 \u05e9\u05de\u05d5\u05e0\u05d4=8 \u05ea\u05e9\u05e2=9 \u05e2\u05e9\u05e8=10 \u05d0\u05d7\u05d3-\u05e2\u05e9\u05e8=11 \u05e9\u05ea\u05d9\u05d9\u05dd-\u05e2\u05e9\u05e8\u05d4=12 \u05e9\u05dc\u05d5\u05e9-\u05e2\u05e9\u05e8\u05d4=13';
 
   var resp = await fetch(CLAUDE_URL, {
