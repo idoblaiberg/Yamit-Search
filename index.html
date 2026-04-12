@@ -93,6 +93,8 @@ body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webk
 .pill.n { background: var(--red-d); color: var(--red); border: 1px solid var(--red); }
 .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 9px; }
 .tag { font-size: 11px; color: var(--mut); background: var(--bg); border: 1px solid var(--bdr); border-radius: 5px; padding: 2px 7px; font-family: var(--mono); }
+.variants { font-size: 13px; color: #374151; margin: 4px 0 6px; line-height: 1.7; }
+.price-strike { font-size: 13px; color: #9ca3af; text-decoration: line-through; margin-left: 4px; }
 .cfoot { padding-top: 9px; border-top: 1px solid var(--bdr); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .reason { font-size: 11px; color: var(--mut); font-style: italic; flex: 1; }
 .price-btn { font-size: 11px; color: var(--acc); background: var(--acc-d); border: 1px solid var(--acc-m); border-radius: 6px; padding: 4px 10px; white-space: nowrap; text-decoration: none; flex-shrink: 0; }
@@ -365,80 +367,68 @@ async function claudeSearch(query, candidates, apiKey, knowledgeText) {
     .map(function(m) { return candidates[m.idx]; });
 }
 
-// ── RENDER (T7) ──
-// All inventory data is passed through esc() before DOM insertion.
-// This is the only place where innerHTML is used with dynamic content,
-// and all interpolated values are HTML-escaped (see esc() above).
-function buildCard(result) {
-  var item = result.item;
-  var reason = result.reason || '';
-  var cls  = item.in_stock ? 'y' : 'n';
-  var pill = item.in_stock
-    ? '\u05d1\u05de\u05dc\u05d0\u05d9 \u00d7' + item.qty
-    : '\u05d0\u05d6\u05dc';
+// ── RENDER ──
+function buildCard(product) {
+  var inStock = product.variants.some(function(v) { return v.stock === 'in_stock'; });
+  var cls  = inStock ? 'y' : 'n';
+  var pill = inStock ? '\u05d1\u05de\u05dc\u05d0\u05d9' : '\u05d0\u05d6\u05dc';
 
-  var tagsHtml = '<span class="tag">' + esc(item.cat) + '</span>';
-  if (item.sku) tagsHtml += '<span class="tag">' + esc(item.sku) + '</span>';
-  if (item.alt) tagsHtml += '<span class="tag">' + esc(item.alt) + '</span>';
+  var hasSize  = product.variants.some(function(v) { return v.size; });
+  var hasColor = product.variants.some(function(v) { return v.color; });
+  var variantHtml = '';
 
-  var fallbackUrl = 'https://yamitysb.co.il/?s=' +
-      encodeURIComponent(item.name.replace(/[\u0590-\u05FF]+\s*/g, '').trim() || item.name) +
-      '&post_type=product';
-  var bestUrl = item.url || fallbackUrl;
-
-  var priceDisplay = '';
-  if (item.price_low !== null && item.price_low !== undefined) {
-    var lo = Math.round(item.price_low).toLocaleString('he-IL');
-    var hi = Math.round(item.price_high || item.price_low).toLocaleString('he-IL');
-    priceDisplay = (item.price_high && item.price_high !== item.price_low) ? '\u20aa' + lo + '\u2013\u20aa' + hi : '\u20aa' + lo;
+  if (hasColor && hasSize) {
+    // Group by color: "כחול: S · M✓ / שחור: L✓ · XL"
+    var colorMap = {}, colorOrder = [];
+    product.variants.forEach(function(v) {
+      var c = v.color || '\u2014';
+      if (!colorMap[c]) { colorMap[c] = []; colorOrder.push(c); }
+      colorMap[c].push(v);
+    });
+    variantHtml = colorOrder.map(function(c) {
+      var sizes = colorMap[c].map(function(v) {
+        return esc(v.size) + (v.stock === 'in_stock' ? '\u2713' : '');
+      }).join(' \u00b7 ');
+      return esc(c) + ': ' + sizes;
+    }).join('<br>');
+  } else if (hasColor) {
+    variantHtml = product.variants.map(function(v) {
+      return esc(v.color) + (v.stock === 'in_stock' ? '\u2713' : '');
+    }).join(' \u00b7 ');
+  } else if (hasSize) {
+    variantHtml = product.variants.map(function(v) {
+      return esc(v.size) + (v.stock === 'in_stock' ? '\u2713' : '');
+    }).join(' \u00b7 ');
   }
 
-  var hasPrice = !!priceDisplay;
-  var hasPage  = !!item.url;
-  var btnLabel = hasPrice ? '\u05de\u05d7\u05d9\u05e8 \u2197' : hasPage ? '\u05dc\u05d7\u05e0\u05d5\u05ea \u2197' : '\u05d7\u05d9\u05e4\u05d5\u05e9 \u2197';
-  var btnClass  = hasPage ? 'price-btn' : 'price-btn search-btn';
+  var priceHtml = '';
+  if (product.sale) {
+    priceHtml = '<span class="price-tag">\u20aa' + product.sale.toLocaleString('he-IL') + '</span>' +
+                '<span class="price-strike">\u20aa' + (product.price || product.sale).toLocaleString('he-IL') + '</span>';
+  } else if (product.price) {
+    priceHtml = '<span class="price-tag">\u20aa' + product.price.toLocaleString('he-IL') + '</span>';
+  }
 
-  var sibHtml = '';
-
-  var priceHtml = priceDisplay ? '<span class="price-tag">' + esc(priceDisplay) + '</span>' : '';
-  var priceBtn  = '<a class="' + btnClass + '" href="' + esc(bestUrl) + '" target="_blank" rel="noopener">' + btnLabel + '</a>';
-
-  var footHtml = '<div class="cfoot">' +
-    '<div class="reason">' + esc(reason) + '</div>' +
-    priceHtml +
-    priceBtn +
-    '</div>';
+  var btnHref  = product.url ||
+    'https://yamitysb.co.il/?s=' + encodeURIComponent(product.name) + '&post_type=product';
+  var btnLabel = product.url ? '\u05dc\u05d7\u05e0\u05d5\u05ea \u2197' : '\u05d7\u05d9\u05e4\u05d5\u05e9 \u2197';
 
   return '<div class="card ' + cls + '">' +
     '<div class="ctop">' +
-      '<div class="cname">' + esc(item.name) + '</div>' +
+      '<div class="cname">' + esc(product.name) + '</div>' +
       '<div class="pill ' + cls + '">' + pill + '</div>' +
     '</div>' +
-    '<div class="tags">' + tagsHtml + '</div>' +
-    sibHtml +
-    footHtml +
+    '<div class="tags">' +
+      '<span class="tag">' + esc(product.cat) + '</span>' +
+      (product.sku ? '<span class="tag">' + esc(product.sku) + '</span>' : '') +
+    '</div>' +
+    (variantHtml ? '<div class="variants">' + variantHtml + '</div>' : '') +
+    '<div class="cfoot">' +
+      '<div class="reason"></div>' +
+      priceHtml +
+      '<a class="price-btn" href="' + esc(btnHref) + '" target="_blank" rel="noopener">' + btnLabel + '</a>' +
+    '</div>' +
     '</div>';
-}
-
-// Group results by item.cat and render category headers when 2+ categories present.
-// Group order follows first appearance (highest-scored item per category comes first).
-function buildGroupedResults(results) {
-  var groupOrder = [], groupMap = {};
-  results.forEach(function(r) {
-    var cat = r.item.cat;
-    if (!groupMap[cat]) { groupMap[cat] = []; groupOrder.push(cat); }
-    groupMap[cat].push(r);
-  });
-  var html = '<div class="rlist">';
-  if (groupOrder.length <= 1) {
-    html += results.map(buildCard).join('');
-  } else {
-    groupOrder.forEach(function(cat) {
-      html += '<div class="cat-header">' + esc(cat) + '</div>';
-      html += groupMap[cat].map(buildCard).join('');
-    });
-  }
-  return html + '</div>';
 }
 
 function buildSkeletons(n) {
