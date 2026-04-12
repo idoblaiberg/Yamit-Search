@@ -267,78 +267,50 @@ function updateBadge() {
   }
 }
 
-// ── PREFILTER (T3) ──
-var TRANS = {
-  // Kite brands
-  '\u05d0\u05d9\u05d1\u05d5':'evo',       'evo':'\u05d0\u05d9\u05d1\u05d5',
-  '\u05e8\u05d9\u05d1\u05dc':'rebel',     'rebel':'\u05e8\u05d9\u05d1\u05dc',
-  '\u05e0\u05d0\u05d5':'neo',             'neo':'\u05e0\u05d0\u05d5',
-  '\u05d3\u05d9\u05d9\u05e1':'dice',      'dice':'\u05d3\u05d9\u05d9\u05e1',
-  '\u05d5\u05e0\u05d2\u05e1':'vegas',     'vegas':'\u05d5\u05e0\u05d2\u05e1',
-  '\u05d5\u05d0\u05dd':'wam',             'wam':'\u05d5\u05d0\u05dd',
-  '\u05d2\u05d5\u05e0\u05d6\u05dc\u05e1':'gonzales', 'gonzales':'\u05d2\u05d5\u05e0\u05d6\u05dc\u05e1',
-  // Wing brands
-  '\u05d9\u05d5\u05e0\u05d9\u05d8':'unit',     'unit':'\u05d9\u05d5\u05e0\u05d9\u05d8',
-  '\u05e1\u05dc\u05d9\u05e7':'slick',     'slick':'\u05e1\u05dc\u05d9\u05e7',
-  '\u05d5\u05e0\u05d8\u05d9\u05e1':'ventis',   'ventis':'\u05d5\u05e0\u05d8\u05d9\u05e1',
-  '\u05e4\u05dc\u05d5\u05d0\u05d8':'float',    'float':'\u05e4\u05dc\u05d5\u05d0\u05d8',
-  // Windsurf board brand
-  '\u05d2\u05e7\u05d5':'gecko',           'gecko':'\u05d2\u05e7\u05d5',
-  // Kayak brands
-  '\u05e0\u05dc\u05d5':'nelo',            'nelo':'\u05e0\u05dc\u05d5',
-  '\u05d1\u05e8\u05e7\u05d4':'braca',     'braca':'\u05d1\u05e8\u05e7\u05d4',
-  // Kayak model synonyms (critical: surfski boat = SCORPIO, not paddles)
-  '\u05e1\u05e8\u05e4\u05e1\u05e7\u05d9':'scorpio', 'scorpio':'\u05e1\u05e8\u05e4\u05e1\u05e7\u05d9',
-  // Kite accessories
-  '\u05d8\u05e8\u05e4\u05d6':'harness',   'harness':'\u05d8\u05e8\u05e4\u05d6',
-};
-var NUM_WORDS = {
-  '\u05d0\u05d7\u05d3':'1','\u05e9\u05ea\u05d9\u05d9\u05dd':'2','\u05e9\u05dc\u05d5\u05e9':'3',
-  '\u05d0\u05e8\u05d1\u05e2':'4','\u05d7\u05de\u05e9':'5','\u05e9\u05e9':'6',
-  '\u05e9\u05d1\u05e2':'7','\u05e9\u05de\u05d5\u05e0\u05d4':'8',
-  '\u05ea\u05e9\u05e2':'9','\u05e2\u05e9\u05e8':'10','\u05e2\u05e9\u05e8\u05d4':'10',
-  '\u05d0\u05d7\u05d3 \u05e2\u05e9\u05e8':'11','\u05e9\u05ea\u05d9\u05dd \u05e2\u05e9\u05e8\u05d4':'12',
-  '\u05e9\u05dc\u05d5\u05e9 \u05e2\u05e9\u05e8\u05d4':'13',
-};
+// ── SPORT DETECTION + KNOWLEDGE ──
+var SPORT_ROUTES = [
+  { keys: ['\u05e1\u05d0\u05e4', 'sup', '\u05d2\u05dc\u05d9\u05e9\u05ea \u05e1\u05d0\u05e4'], file: 'sup' },
+  { keys: ['\u05d2\u05dc\u05d9\u05e9\u05ea \u05d2\u05dc\u05d9\u05dd', 'surf', 'surfboard', '\u05dc\u05d5\u05e0\u05d2\u05d1\u05d5\u05e8\u05d3'], file: 'surf' },
+  { keys: ['\u05e7\u05d9\u05d9\u05d8', 'kite', 'kitesurfing'], file: 'kite' },
+  { keys: ['\u05d5\u05d5\u05d9\u05e0\u05d2', 'wing'], file: 'wing' },
+  { keys: ['\u05d2\u05dc\u05d9\u05e9\u05ea \u05e8\u05d5\u05d7', 'windsurf', '\u05de\u05e4\u05e8\u05e9', '\u05d2\u05dc\u05e9\u05df \u05e8\u05d5\u05d7'], file: 'windsurf' },
+  { keys: ['\u05e7\u05d9\u05d0\u05e7', 'kayak', '\u05e1\u05e8\u05e4\u05e1\u05e7\u05d9', 'surf ski', '\u05d7\u05ea\u05d9\u05e8\u05d4'], file: 'kayak' },
+  { keys: ['\u05d7\u05dc\u05d9\u05e4\u05d4', 'wetsuit', '\u05d1\u05d9\u05d2\u05d5\u05d3', '\u05e0\u05d0\u05d5\u05e4\u05e8\u05df'], file: 'clothing' },
+  { keys: ['\u05e4\u05d5\u05d9\u05dc', 'foil', 'hydrofoil'], files: ['kite', 'wing', 'windsurf'] },
+];
 
-function preFilter(inv, query) {
-  if (!inv.length || !query.trim()) return [];
+function detectSport(query) {
   var q = query.toLowerCase();
-  for (var word in NUM_WORDS) {
-    if (NUM_WORDS.hasOwnProperty(word)) {
-      q = q.split(word).join(NUM_WORDS[word]);
+  var files = {};
+  SPORT_ROUTES.forEach(function(route) {
+    if (route.keys.some(function(k) { return q.indexOf(k) !== -1; })) {
+      var targets = route.file ? [route.file] : route.files;
+      targets.forEach(function(f) { files[f] = true; });
     }
-  }
-  var toks = q.split(/\s+/).filter(Boolean);
-  var expanded = [];
-  for (var i = 0; i < toks.length; i++) {
-    expanded.push(toks[i]);
-    if (TRANS[toks[i]]) expanded.push(TRANS[toks[i]]);
-  }
-  toks = expanded;
-
-  var scored = inv.map(function(item) {
-    var hay = (item.name + ' ' + item.cat + ' ' + item.sku).toLowerCase();
-    var sc = 0;
-    for (var j = 0; j < toks.length; j++) {
-      var t = toks[j];
-      if (hay.indexOf(t) !== -1) {
-        sc += 2;
-      } else if (t.length >= 3) {
-        var words = hay.split(/\s+/);
-        for (var k = 0; k < words.length; k++) {
-          if (words[k].indexOf(t) === 0) { sc += 1; break; }
-        }
-      }
-    }
-    return { item: item, sc: sc };
   });
+  return Object.keys(files);
+}
 
-  return scored
-    .filter(function(x) { return x.sc > 0; })
-    .sort(function(a, b) { return b.sc - a.sc; })
-    .slice(0, PRE_MAX)
-    .map(function(x) { return x.item; });
+function buildKnowledgePrompt(sportFiles) {
+  var parts = [];
+  if (KNOWLEDGE['master']) parts.push(KNOWLEDGE['master']);
+  sportFiles.forEach(function(f) { if (KNOWLEDGE[f]) parts.push(KNOWLEDGE[f]); });
+  return parts.join('\n\n---\n\n');
+}
+
+function loadKnowledge() {
+  ['master','kite','wing','windsurf','sup','surf','kayak','clothing'].forEach(function(name) {
+    fetch('knowledge/' + name + '.txt')
+      .then(function(r) { return r.text(); })
+      .then(function(text) { KNOWLEDGE[name] = text; })
+      .catch(function() {});
+  });
+}
+
+// ── FUZZY SEARCH ──
+function fuzzySearch(query) {
+  if (!FUSE || !query.trim()) return [];
+  return FUSE.search(query, { limit: FUSE_MAX }).map(function(r) { return r.item; });
 }
 
 // ── CLAUDE CLIENT (T6) ──
@@ -596,7 +568,7 @@ async function doSearch() {
   rl.innerHTML = buildSkeletons(4);
 
   try {
-    var candidates = preFilter(PRODUCTS, query);
+    var candidates = fuzzySearch(query);
 
     if (!candidates.length) {
       rl.innerHTML = buildEmpty('\ud83e\udd14', '\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0', '\u05e0\u05e1\u05d4 \u05de\u05d5\u05e0\u05d7 \u05d0\u05d7\u05e8 \u2014 EVO 10, \u05e8\u05d9\u05d1\u05dc 9, kayak');
