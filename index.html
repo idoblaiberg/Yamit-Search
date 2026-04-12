@@ -225,7 +225,7 @@ function loadProductIndex() {
       PRODUCTS_UPDATED = data.updated || '';
       FUSE = new Fuse(PRODUCTS, {
         keys: ['search_doc'],
-        threshold: 0.4,
+        threshold: 0.6,
         includeScore: true,
         ignoreLocation: true,
       });
