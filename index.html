@@ -114,6 +114,7 @@ body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webk
 .empty h3 { font-size: 17px; font-weight: 700; margin-bottom: 7px; }
 .empty p { font-size: 13px; color: var(--mut); line-height: 1.6; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
 </head>
 <body>
 
@@ -182,21 +183,19 @@ body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webk
 <script>
 'use strict';
 
-// ── CONSTANTS (T1) ──
-// Model ID confirmed from system knowledge; column indices from Spike 1;
-// API headers confirmed from Spike 3.
+// ── CONSTANTS ──
 var CLAUDE_MODEL  = 'claude-haiku-4-5-20251001';
 var CLAUDE_URL    = 'https://api.anthropic.com/v1/messages';
-var STORAGE_INV     = 'yamit_inv';
-var STORAGE_KEY     = 'yamit_key';
-var STORAGE_UPDATED = 'yamit_updated';
-var COL_SKU  = 2;
-var COL_NAME = 3;
-var COL_ALT  = 4;
-var COL_QTY  = 6;
-var PRE_MAX  = 80;
-var RES_MAX  = 8;
+var STORAGE_KEY   = 'yamit_key';
+var RES_MAX       = 8;
 var RES_MIN_SCORE = 0.4;
+var FUSE_MAX      = 40;
+
+// ── DATA GLOBALS ──
+var PRODUCTS         = [];   // loaded from product_index.json
+var PRODUCTS_UPDATED = '';   // ISO timestamp
+var KNOWLEDGE        = {};   // sport name -> text (loaded async)
+var FUSE             = null; // Fuse.js instance (built after PRODUCTS loads)
 
 // ── SAFE HTML ESCAPE (used everywhere before DOM insertion) ──
 // All user-supplied and inventory data is passed through esc() before
@@ -539,9 +538,9 @@ async function claudeSearch(query, candidates, apiKey) {
     'Kayak BOATS:\u05e7\u05d9\u05d0\u05e7\u05d9\u05dd S.O.T / \u05e7\u05d9\u05d0\u05e7\u05d9\u05dd TOURING / \u05e7\u05d9\u05d0\u05e7\u05d9\u05dd \u05dc\u05de\u05d9\u05dd \u05e1\u05d5\u05e2\u05e8\u05d9\u05dd (these are BOATS)\n' +
     'Kayak PADDLES (NOT boats):BRACA SURFSKI / BRACA TOURING / BRACA OLYMPIC / BRACA OUTRIGGER / BRACA SUP / \u05de\u05e9\u05d5\u05d8\u05d9\u05dd \u05dc\u05e7\u05d9\u05d0\u05e7\u05d9\u05dd\n\n' +
     'MODELS BY SPORT:\n' +
-    'Kite canopies(Duotone): DICE EVO JUICE NEO REBEL VEGAS WAM GONZALES MONO SELECT SOLEIL SPECTRE\n' +
-    'Kite boards: GONZALES(twintip) PACE INDY FREE | Kite foil kits: SPIRIT BOOSTER SONAR ENTITY BLAZING\n' +
-    'Kite harness: JADE APEX(CURV/SELECT) ECHO B2 | Kite bar: CLICK-BAR TRUST-BAR\n' +
+    'Kite canopies(Duotone): DICE EVO JUICE NEO REBEL VEGAS MONO\n' +
+    'Kite boards: WAM BLUR GONZALES(twintip) PACE INDY FREE | Kite foil kits: SPIRIT BOOSTER SONAR ENTITY BLAZING\n' +
+    'Kite harness: SOLEIL SPECTRE JADE APEX(CURV/SELECT) ECHO B2 | Kite bar: CLICK-BAR TRUST-BAR\n' +
     'Wing wings(Duotone): UNIT SLICK VENTIS FLOAT\n' +
     'Wing boards: SKY-WING SKY-SURF SKYBRID DOWNWINDER\n' +
     'Wing foil kits(Duotone): CARVE FREE (sizes in cm\u00b2: 500-1430) | Foil wings: AERO-CARVE AERO-FREE\n' +
