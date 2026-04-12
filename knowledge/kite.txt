@@ -1,0 +1,11 @@
+Sport: kait surfing (Kitesurfing). Sole brand: Duotone. Exclusive importer.
+Construction: D/LAB=top carbon, SLS=premium, Concept Blue=sustainability, no-suffix=standard
+Kites (hupot): EVO(freeride) REBEL(big air) NEO(wave) VEGAS(freestyle) DICE JUICE(light wind/foil) MONO
+Boards TT (twintip): JAIME SELECT SOLEIL(W) SPIKE TEAM-SERIES GONZALES BIG-AIR
+Boards Wave: BLUR VOLT WHIP VOKE HYBRID PACE
+Control bars: CLICK-BAR TRUST-BAR
+Harnesses: ION APEX SOL RIOT AXXIS MUSE ECHO HADLOW B2 RIPPER
+Foil: AERO=mast/fuselage, CARVE=front wings, shared platform with Wing+Windsurf
+Brands: Duotone, ION, wip
+Terms: hupa/kait=kite canopy, bar=control bar, tarpez=harness, toren=foil mast, tiuva/bladder=bladder, lish=leash
+Sizes: kite 7-15m, twintip 130-145cm, foil wing 400-1400cm2

@@ -1,0 +1,11 @@
+Sport: kayakim (Kayaks). Exclusive importer of NELO, TIDERACE, BRACA PADDLES.
+Types: Olympic/sprint(K1/K2/K4), touring, surf-ski/OC(outrigger), whitewater, canoe polo, Sit-On-Top
+NELO kayaks: SCORPIO(=surfski BOAT) CETUS DELPHIN VIRGO LEO BIW S60 B66
+TIDERACE: touring sea kayaks
+Whitewater: BURN MACHNO REACTR LOKI JED STOUT RIPPER
+SOT: VELOCITY NEREUS CL370 CL470
+Paddles(BRACA): SURFSKI TOURING OLYMPIC OUTRIGGER SUP -- PADDLES not boats
+Other paddles: ROTOMOD WINNER BORA GENESIS ALUTEX ALPINA HURRICANE KINETIC
+Brands: NELO, TIDERACE, BRACA, Yak(clothing), wip(helmets), ION
+CRITICAL: kayak query -> prefer BOAT categories. SCORPIO=surfski BOAT. BRACA-SURFSKI=PADDLE only.
+Terms: kayak, mashhot=paddle, hatirah=paddling, surfski, OC=outrigger, downwind, hatsait=spray deck, kasda=helmet, hege=rudder

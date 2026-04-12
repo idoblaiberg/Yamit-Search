@@ -1,0 +1,11 @@
+Sport: glishat ruah (Windsurfing). Brands: Duotone(sails+boards), Fanatic(boards), ION(harnesses).
+Boards(Fanatic): GECKO STINGRAY
+Boards(Duotone): FALCON GRIP SKATE FREEWAVE EAGLE BLITZ BLAST STINGRAY RIPPER VIPER
+Sails (mifrashot): SUPER-STAR SUPER-HERO SUPER-SESSION S_PACE E_PACE NOW DUKE HERO IDOL PACE WARP ALFA
+Mast tiers: BLACK(50% carbon) SILVER(70%) GOLD(90%) PLATINUM(100%)
+Mast types: SDM(standard diameter) RDM(reduced diameter)
+Mast lengths: 370/400/430/460/490/520/550cm
+Harnesses (ION): waist(motnayim), seat(yeshiva)
+Brands: Duotone, Fanatic, ION, StayCovered
+Terms: glishn-ruah=windsurf board, mifras=sail, toren=mast, manor=boom, tarpez=harness, SDM=standard mast, RDM=reduced mast, IMCS=stiffness index
+Sizes: sail 2.5-8.8m2, mast 370-550cm, board 68-180L

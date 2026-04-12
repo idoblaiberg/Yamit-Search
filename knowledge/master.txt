@@ -1,0 +1,9 @@
+Yamit water sports store (yamitysb.co.il). Exclusive Israeli importer of: Duotone, Fanatic, NELO, TIDERACE, BRACA PADDLES.
+Always exclude secondhand items.
+Construction tiers (Duotone/Fanatic): D/LAB=top carbon, SLS=premium, Concept Blue=sustainability, no-suffix=standard
+Shared foil platform: AERO=mast/fuselage, CARVE wings (650-950cm2) compatible across Kite+Wing+Windsurf
+Foil anatomy: toren=mast, guf/fuze=fuselage, knaf kadmit=front wing, stabilizer=rear wing, ALU=aluminum, karbon=carbon
+Sport routing: sap/SUP=sup, surf/galim=surf, kait/kite=kite, wing=wing, ruah/windsurf=windsurf, kayak=kayak, halifa/wetsuit=clothing
+Multi-sport: foil/poyel -> kite+wing+windsurf
+Shared accessories: ION(all sports), wip(helmets/vests), StayCovered(car racks/bags)
+Key Hebrew terms: glishn=board, mifras=sail, hupa=kite, kanaf=wing, poyel=hydrofoil, toren=mast, manor=boom, tarpez=harness, lish=leash, snapir=fin, nafah=volume, mitnapheh=inflatable, kashih=rigid

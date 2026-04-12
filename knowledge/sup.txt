@@ -1,0 +1,9 @@
+Sport: glishat sap (SUP). Exclusive importer of Fanatic.
+Boards(Fanatic composite): ALLWAVE(wave/all-round) STUBBY(wave) PROWAVE(advanced) STYLEMASTER(longboard) FLY(all-round) FALCON(race) BLITZ(touring)
+Boards(Fanatic inflatable): FLY-AIR
+Paddles(QB/QuickBlade): ONO AVA STINGRAY T2 UV V-DRIVE KAHANA MICROFLY
+Paddle tokens: CARBON HEX FLEX HYBRID FIXED ADJUSTABLE
+Brands: Fanatic, QB/QuickBlade, ION(accessories+leashes)
+Terms: sap=SUP board, kashih=rigid, mitnapheh=inflatable, mashhot=paddle, lish=leash, nafah=volume, mashhava=pump
+Naming: FANATIC FLY 2024 10'6"x32" = model*year*length*width
+Sizes: board 9-14ft, width 28-36in, volume 100-250L

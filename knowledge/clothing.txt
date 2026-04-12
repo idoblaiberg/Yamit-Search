@@ -1,0 +1,10 @@
+Sport: bigud glisha (Wetsuits + Apparel). Shared across all sports.
+Brands: O'Neill(main wetsuit), ION(wetsuits+vests+accessories), wip(helmets+vests)
+O'Neill models: HYPERFREAK(premium) PSYCHO-TECH(warmest) EPIC(mid) REACTOR(entry)
+O'Neill thickness: 3/2(spring/autumn), 4/3(winter), 5/4(cold winter)
+O'Neill zip: FZ=front zip, BZ=back zip, NZ=no zip
+ION wetsuits(men): SEEK-AMP SEEK-CORE ELEMENT STATIC
+ION wetsuits(women): AMAZE-AMP AMAZE-CORE ELEMENT STATIC
+Other categories: impact vest(afudat impact), buoyancy vest(afudat tsifah), helmet(kasda), gloves(kfafot), reef shoes/booties, surf hood(kova glisha)
+Terms: halifa-glisha=wetsuit, neopren=neoprene, short-john=shorty, long-john, lycra/rashguard, poncho, FZ=front zip, BZ=back zip, NZ=no zip, thickness(ovhi)
+Sizes: XS S M L XL XXL, gvarim=men, nashim=women, noar=youth
