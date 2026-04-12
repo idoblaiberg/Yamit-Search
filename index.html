@@ -209,220 +209,6 @@ function esc(s) {
     .replace(/'/g, '&#x27;');
 }
 
-// ── PARSER (T1) ──
-// Verified against all 4 real files in Spike 1.
-// Column mapping: COL_SKU=2, COL_NAME=3, COL_ALT=4, COL_QTY=6
-function parseCSV(text, filename) {
-  var items = [];
-  var raw = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  var lines = raw.split('\n');
-  var cat = catFromFilename(filename);
-
-  for (var i = 1; i < lines.length; i++) {
-    var line = lines[i].trim();
-    if (!line) continue;
-    var cols = splitCSVLine(line);
-    if (cols.length < 4) continue;
-
-    var origName = (cols[COL_NAME] || '').trim();
-    var sku  = stripStars(cols[COL_SKU]  || '');
-    var name = stripStars(origName);
-    var alt  = (cols[COL_ALT] || '').trim();
-    var qtyStr = cols.length > COL_QTY ? (cols[COL_QTY] || '').trim() : '';
-
-    // Section headers have *** in the ORIGINAL name (Spike 1)
-    if (origName.indexOf('***') !== -1) {
-      var label = origName.replace(/\*/g, '').trim();
-      if (label.length > 1) cat = label;
-      continue;
-    }
-
-    if (!name || name.length < 2 || origName === '\u05e9\u05dd \u05e4\u05e8\u05d9\u05d8') continue;
-    if (!sku || sku.length < 3) continue;
-
-    var qty = parseFloat(qtyStr) || 0;
-    items.push({ name: name, sku: sku, alt: alt, cat: cat, qty: qty, in_stock: qty > 0 });
-  }
-  return items;
-}
-
-function stripStars(s) { return s.trim().replace(/^\*+/, ''); }
-
-function catFromFilename(fn) {
-  var f = fn.toLowerCase();
-  if (f.indexOf('kite')  !== -1) return '\u05e7\u05d9\u05d9\u05d8';
-  if (f.indexOf('wind')  !== -1) return '\u05d2\u05dc\u05d9\u05e9\u05ea \u05e8\u05d5\u05d7';
-  if (f.indexOf('wing')  !== -1) return '\u05d5\u05d5\u05d9\u05e0\u05d2';
-  if (f.indexOf('kayak') !== -1) return '\u05e7\u05d9\u05d0\u05e7';
-  return '\u05db\u05dc\u05dc\u05d9';
-}
-
-function splitCSVLine(line) {
-  var cols = [], cur = '', inQ = false;
-  for (var i = 0; i < line.length; i++) {
-    var c = line[i];
-    if (c === '"') {
-      if (inQ && line[i+1] === '"') { cur += '"'; i++; }
-      else inQ = !inQ;
-    } else if (c === ',' && !inQ) {
-      cols.push(cur); cur = '';
-    } else { cur += c; }
-  }
-  cols.push(cur);
-  return cols;
-}
-
-// ── PRICES (loaded async from prices.json) ──
-var PRICES = null;
-
-fetch('prices.json').then(function(r) { return r.json(); }).then(function(p) {
-  PRICES = p;
-}).catch(function() { /* prices.json unavailable — fallback to site search */ });
-
-// Extract normalized English key from a product name (mirrors build_prices.py logic)
-var PRICE_SKIP = new Set(['the','and','for','ltd','sot','dtk','txt','hrs','pro','max','air','one','new']);
-function findPrice(itemName) {
-  var cleaned = itemName.replace(/[\/\-]/g, ' ');
-  var words = (cleaned.match(/[A-Za-z]{2,}/g) || [])
-    .map(function(w) { return w.toLowerCase(); })
-    .filter(function(w) { return !PRICE_SKIP.has(w); });
-  if (!words.length || !PRICES) return null;
-  // Mirror scraper key quality gate: require 1 word ≥3 chars OR 2+ words
-  var hasLongWord = words.some(function(w) { return w.length >= 3; });
-  if (!hasLongWord && words.length < 2) return null;
-  // Try progressively shorter prefix combinations
-  for (var len = words.length; len >= 1; len--) {
-    var key = words.slice(0, len).join(' ');
-    if (PRICES[key]) return PRICES[key];
-  }
-  return null;
-}
-
-// ── SITEMAP INDEX (loaded async from sitemap_index.json) ──
-var SITEMAP = null;
-
-fetch('sitemap_index.json').then(function(r) { return r.json(); }).then(function(d) {
-  SITEMAP = d.entries;
-}).catch(function() { /* sitemap_index.json unavailable — fallback to site search */ });
-
-// Tokens to skip when building slug-match tokens (short words that appear everywhere)
-var URL_SKIP = new Set(['dtk','txt','air','one','ii','iii','iv']);
-
-function findProductUrl(itemName) {
-  if (!SITEMAP) return null;
-  // Normalize: strip leading *, expand D/LAB → DLAB for token extraction
-  var cleaned = itemName.replace(/^[*]+/, '').replace(/D[\/\\]LAB/gi, 'DLAB').trim();
-
-  // English tokens (2+ chars, not in skip list)
-  var engTokens = (cleaned.match(/[A-Za-z]{2,}/g) || [])
-    .map(function(w) { return w.toLowerCase(); })
-    .filter(function(w) { return !URL_SKIP.has(w); });
-  if (!engTokens.length) return null;
-
-  // Expand DLAB → also 'd' + 'lab' (slug encodes as "d lab")
-  var allEng = [];
-  engTokens.forEach(function(w) {
-    allEng.push(w);
-    if (w === 'dlab') { allEng.push('d'); allEng.push('lab'); }
-  });
-
-  // Numeric tokens with year/size expansions
-  var nums = [];
-  (cleaned.match(/\d+(?:\.\d+)?/g) || []).forEach(function(n) {
-    nums.push(n);
-    if (/^\d{2}$/.test(n) && +n >= 19 && +n <= 30) nums.push('20' + n); // 21 → 2021
-    if (/^0\d$/.test(n)) nums.push(String(parseInt(n, 10)));             // 07 → 7
-    if (/^\d+\.\d+$/.test(n)) {                                          // 4.0 → '4','0'
-      var p = n.split('.'); nums.push(p[0]); nums.push(p[1]);
-    }
-  });
-
-  // Score each sitemap entry — whole-word match only
-  function matchWord(slug, tok) {
-    var idx = slug.indexOf(tok);
-    if (idx < 0) return false;
-    var before = idx === 0 || slug[idx - 1] === ' ';
-    var after  = idx + tok.length === slug.length || slug[idx + tok.length] === ' ';
-    return before && after;
-  }
-
-  var best = null, bestScore = 0;
-  for (var i = 0; i < SITEMAP.length; i++) {
-    var slug = SITEMAP[i][0], score = 0;
-    allEng.forEach(function(w) { if (matchWord(slug, w)) score += 2; });
-    nums.forEach(function(n)   { if (matchWord(slug, n)) score += 1; });
-    if (score > bestScore) { bestScore = score; best = SITEMAP[i][1]; }
-  }
-  return bestScore >= 2 ? best : null;
-}
-
-// ── STORE (T2) ──
-var INV = [];
-
-// Find in-stock items that share the same product family (used for אזל sibling note).
-// Matches on ALL base English tokens (3+ chars) present in both names.
-function findSiblings(item) {
-  var tokens = (item.name.match(/[A-Za-z]{3,}/g) || [])
-    .map(function(w) { return w.toLowerCase(); })
-    .filter(function(w) { return !PRICE_SKIP.has(w); });
-  if (tokens.length < 1) return [];
-  return INV.filter(function(other) {
-    if (other === item || !other.in_stock) return false;
-    var lc = other.name.toLowerCase();
-    return tokens.every(function(t) { return lc.indexOf(t) >= 0; });
-  });
-}
-
-function setInventory(items, updatedTs) {
-  INV = items;
-  saveToStorage(items, updatedTs || new Date().toISOString());
-  updateBadge();
-}
-
-function saveToStorage(items, updatedTs) {
-  try {
-    var compact = items.map(function(x) {
-      return { n: x.name, s: x.sku, a: x.alt, c: x.cat, q: x.qty, i: x.in_stock ? 1 : 0 };
-    });
-    localStorage.setItem(STORAGE_INV, JSON.stringify(compact));
-    if (updatedTs) localStorage.setItem(STORAGE_UPDATED, updatedTs);
-  } catch(e) { /* quota exceeded or private mode — non-fatal */ }
-}
-
-function loadFromStorage() {
-  try {
-    var raw = localStorage.getItem(STORAGE_INV);
-    if (!raw) return false;
-    var compact = JSON.parse(raw);
-    INV = compact.map(function(x) {
-      return { name: x.n, sku: x.s, alt: x.a, cat: x.c, qty: x.q, in_stock: !!x.i };
-    });
-    return INV.length > 0;
-  } catch(e) { INV = []; return false; }
-}
-
-function getStoredUpdated() {
-  return localStorage.getItem(STORAGE_UPDATED) || null;
-}
-
-function updateBadge() {
-  var total = INV.length;
-  var inStock = INV.filter(function(x) { return x.in_stock; }).length;
-  var el = document.getElementById('badge');
-  if (total) {
-    var ts = getStoredUpdated();
-    var age = '';
-    if (ts) {
-      var days = Math.floor((Date.now() - new Date(ts).getTime()) / 86400000);
-      age = days === 0 ? ' \u00b7 היום' : ' \u00b7 ' + days + 'd';
-    }
-    el.textContent = inStock + '/' + total + age;
-    el.className = 'badge on';
-  } else {
-    el.textContent = '\u05d0\u05d9\u05df \u05de\u05dc\u05d0\u05d9';
-    el.className = 'badge';
-  }
-}
 
 // ── SETTINGS (T2) ──
 function getKey()    { return localStorage.getItem(STORAGE_KEY) || ''; }
@@ -443,6 +229,43 @@ function saveSettings() {
 document.getElementById('settingsOv').addEventListener('click', function(e) {
   if (e.target === e.currentTarget) closeSettings();
 });
+
+// ── PRODUCT INDEX ──
+function loadProductIndex() {
+  return fetch('product_index.json')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data || !data.products || !data.products.length) return;
+      PRODUCTS = data.products;
+      PRODUCTS_UPDATED = data.updated || '';
+      FUSE = new Fuse(PRODUCTS, {
+        keys: ['search_doc'],
+        threshold: 0.4,
+        includeScore: true,
+      });
+      updateBadge();
+    });
+}
+
+function updateBadge() {
+  var total = PRODUCTS.length;
+  var inStock = PRODUCTS.filter(function(p) {
+    return p.variants.some(function(v) { return v.stock === 'in_stock'; });
+  }).length;
+  var el = document.getElementById('badge');
+  if (total) {
+    var age = '';
+    if (PRODUCTS_UPDATED) {
+      var days = Math.floor((Date.now() - new Date(PRODUCTS_UPDATED).getTime()) / 86400000);
+      age = days === 0 ? ' \u00b7 \u05d4\u05d9\u05d5\u05dd' : ' \u00b7 ' + days + 'd';
+    }
+    el.textContent = inStock + '/' + total + age;
+    el.className = 'badge on';
+  } else {
+    el.textContent = '\u05d8\u05d5\u05e2\u05df...';
+    el.className = 'badge';
+  }
+}
 
 // ── PREFILTER (T3) ──
 var TRANS = {
@@ -619,43 +442,24 @@ function buildCard(result) {
   if (item.sku) tagsHtml += '<span class="tag">' + esc(item.sku) + '</span>';
   if (item.alt) tagsHtml += '<span class="tag">' + esc(item.alt) + '</span>';
 
-  var sitemapUrl  = findProductUrl(item.name);
-  var priceMatch  = findPrice(item.name);
-  var hasPrice    = !!(priceMatch && priceMatch.low !== null);
-  var hasPage     = !!(priceMatch || sitemapUrl);
   var fallbackUrl = 'https://yamitysb.co.il/?s=' +
       encodeURIComponent(item.name.replace(/[\u0590-\u05FF]+\s*/g, '').trim() || item.name) +
       '&post_type=product';
-  // Link priority: priced page first (so price + link always show the same page),
-  // then sitemap URL (direct product page without price), then site search fallback.
-  var bestUrl = (priceMatch && priceMatch.url) || sitemapUrl || fallbackUrl;
+  var bestUrl = item.url || fallbackUrl;
 
-  // Scenario 1 & 2: price found — show ₪ range inline
   var priceDisplay = '';
-  if (hasPrice) {
-    var lo = Math.round(priceMatch.low).toLocaleString('he-IL');
-    var hi = Math.round(priceMatch.high).toLocaleString('he-IL');
-    priceDisplay = priceMatch.high !== priceMatch.low ? '\u20aa' + lo + '\u2013\u20aa' + hi : '\u20aa' + lo;
+  if (item.price_low !== null && item.price_low !== undefined) {
+    var lo = Math.round(item.price_low).toLocaleString('he-IL');
+    var hi = Math.round(item.price_high || item.price_low).toLocaleString('he-IL');
+    priceDisplay = (item.price_high && item.price_high !== item.price_low) ? '\u20aa' + lo + '\u2013\u20aa' + hi : '\u20aa' + lo;
   }
 
-  // Button label and style vary by scenario:
-  // 1: in stock + price  → "מחיר ↗" (green)
-  // 2: אזל   + price     → "מחיר ↗" (green)
-  // 3: in stock + page   → "לחנות ↗" (green)
-  // 4: no page found     → "חיפוש ↗" (muted)
+  var hasPrice = !!priceDisplay;
+  var hasPage  = !!item.url;
   var btnLabel = hasPrice ? '\u05de\u05d7\u05d9\u05e8 \u2197' : hasPage ? '\u05dc\u05d7\u05e0\u05d5\u05ea \u2197' : '\u05d7\u05d9\u05e4\u05d5\u05e9 \u2197';
   var btnClass  = hasPage ? 'price-btn' : 'price-btn search-btn';
 
-  // Sibling note for אזל items — find in-stock variants of same product in INV
   var sibHtml = '';
-  if (!item.in_stock) {
-    var sibs = findSiblings(item);
-    if (sibs.length > 0) {
-      var sibNames = sibs.slice(0, 3).map(function(s) { return esc(s.name); }).join(', ');
-      if (sibs.length > 3) sibNames += ' +' + (sibs.length - 3);
-      sibHtml = '<div class="sib-note">\u05d2\u05dd \u05d1\u05de\u05dc\u05d0\u05d9: ' + sibNames + '</div>';
-    }
-  }
 
   var priceHtml = priceDisplay ? '<span class="price-tag">' + esc(priceDisplay) + '</span>' : '';
   var priceBtn  = '<a class="' + btnClass + '" href="' + esc(bestUrl) + '" target="_blank" rel="noopener">' + btnLabel + '</a>';
@@ -748,47 +552,8 @@ function showPendingFiles() {
 }
 
 async function doLoad() {
-  if (!pendingFiles.length) return;
-  var btn = document.getElementById('loadBtn');
-  btn.disabled = true;
-  btn.textContent = '\u05e7\u05d5\u05e8\u05d0 \u05e7\u05d1\u05e6\u05d9\u05dd...';
-
-  var allItems = [];
-  var statuses = [];
-
-  for (var idx = 0; idx < pendingFiles.length; idx++) {
-    var f = pendingFiles[idx];
-    try {
-      var text = await readFileAsText(f);
-      var items = parseCSV(text, f.name);
-      var ns = items.filter(function(x) { return x.in_stock; }).length;
-      allItems = allItems.concat(items);
-      statuses.push({ name: f.name, count: items.length, ns: ns, ok: true });
-    } catch(e) {
-      statuses.push({ name: f.name, ok: false, error: e.message });
-    }
-  }
-
-  var listHtml = statuses.map(function(s) {
-    var meta = s.ok
-      ? s.count + ' \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd \u00b7 ' + s.ns + ' \u05d1\u05de\u05dc\u05d0\u05d9'
-      : esc(s.error);
-    return '<div class="fi ' + (s.ok ? 'ok' : 'err') + '">' +
-      '<div><div class="fi-n">' + esc(s.name) + '</div>' +
-      '<div class="fi-m">' + meta + '</div></div>' +
-      '<div class="fi-s ' + (s.ok ? 'ok' : 'err') + '">' + (s.ok ? '\u2713' : '\u2717') + '</div>' +
-      '</div>';
-  }).join('');
-  document.getElementById('fileList').innerHTML = listHtml;
-
-  if (allItems.length > 0) {
-    setInventory(allItems);
-    btn.textContent = '\u2713 \u05e0\u05d8\u05e2\u05e0\u05d5 ' + allItems.length + ' \u05e4\u05e8\u05d9\u05d8\u05d9\u05dd';
-    setTimeout(showSearch, 800);
-  } else {
-    btn.textContent = '\u05e9\u05d2\u05d9\u05d0\u05d4 \u2014 \u05e0\u05e1\u05d4 \u05e9\u05e0\u05d9\u05ea';
-    btn.disabled = false;
-  }
+  // CSV upload disabled in V2 — inventory is loaded from product_index.json
+  showSearch();
 }
 
 function readFileAsText(file) {
@@ -820,8 +585,8 @@ async function doSearch() {
   var nokeyEl   = document.getElementById('nokeyBanner');
   var searchBtn = document.getElementById('searchBtn');
 
-  if (!INV.length) {
-    rl.innerHTML = buildEmpty('\ud83d\udce6', '\u05d0\u05d9\u05df \u05de\u05dc\u05d0\u05d9', '\u05dc\u05d7\u05e5 \u2191 \u05dc\u05d8\u05e2\u05d9\u05e0\u05ea \u05e7\u05d1\u05e6\u05d9 CSV');
+  if (!PRODUCTS.length) {
+    rl.innerHTML = buildEmpty('\ud83d\udce6', '\u05d0\u05d9\u05df \u05de\u05dc\u05d0\u05d9', '\u05d8\u05d5\u05e2\u05df \u05de\u05dc\u05d0\u05d9...');
     return;
   }
 
@@ -831,7 +596,7 @@ async function doSearch() {
   rl.innerHTML = buildSkeletons(4);
 
   try {
-    var candidates = preFilter(INV, query);
+    var candidates = preFilter(PRODUCTS, query);
 
     if (!candidates.length) {
       rl.innerHTML = buildEmpty('\ud83e\udd14', '\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0', '\u05e0\u05e1\u05d4 \u05de\u05d5\u05e0\u05d7 \u05d0\u05d7\u05e8 \u2014 EVO 10, \u05e8\u05d9\u05d1\u05dc 9, kayak');
@@ -875,17 +640,18 @@ function showUpload() {
 
 function renderCurrentInvStatus() {
   var el = document.getElementById('currentInvStatus');
-  if (!INV.length) { el.innerHTML = ''; return; }
-  var inStock = INV.filter(function(x) { return x.in_stock; }).length;
-  var ts = getStoredUpdated();
+  if (!PRODUCTS.length) { el.innerHTML = ''; return; }
+  var inStock = PRODUCTS.filter(function(p) {
+    return p.variants && p.variants.some(function(v) { return v.stock === 'in_stock'; });
+  }).length;
   var age = '';
-  if (ts) {
-    var days = Math.floor((Date.now() - new Date(ts).getTime()) / 86400000);
+  if (PRODUCTS_UPDATED) {
+    var days = Math.floor((Date.now() - new Date(PRODUCTS_UPDATED).getTime()) / 86400000);
     age = days === 0 ? 'עודכן היום' : 'עודכן לפני ' + days + ' ימים';
   }
   el.innerHTML = '<div class="inv-status">' +
     '<div class="inv-status-info">' +
-      '<strong>' + INV.length + ' פריטים במלאי</strong>' +
+      '<strong>' + PRODUCTS.length + ' פריטים במלאי</strong>' +
       '<small>' + inStock + ' זמינים · ' + esc(age) + '</small>' +
     '</div>' +
     '<div class="inv-status-go" onclick="showSearch()">חזור לחיפוש ←</div>' +
@@ -899,26 +665,10 @@ function showSearch() {
 }
 
 (function init() {
-  var hasLocal = loadFromStorage();
-  if (hasLocal) { updateBadge(); showSearch(); }
-
-  // Fetch inventory.json from GitHub Pages in the background.
-  // If it's newer than what's in localStorage, replace silently.
-  fetch('inventory.json').then(function(r) { return r.json(); }).then(function(data) {
-    if (!data || !data.items || !data.items.length) return;
-    var remoteTs = data.updated || '';
-    var localTs  = getStoredUpdated() || '';
-    // Update if remote is newer, or if we had nothing locally
-    if (!hasLocal || remoteTs > localTs) {
-      var items = data.items.map(function(x) {
-        return { name: x.n, sku: x.s, alt: x.a, cat: x.c, qty: x.q, in_stock: !!x.i };
-      });
-      setInventory(items, remoteTs);
-      if (!hasLocal) showSearch();
-    }
+  loadProductIndex().then(function() {
+    showSearch();
   }).catch(function() {
-    // inventory.json not available (local dev, or not yet pushed) — that's fine
-    if (!hasLocal) showUpload();
+    showUpload();
   });
 })();
 </script>
