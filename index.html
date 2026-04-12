@@ -125,7 +125,6 @@ body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webk
   <div class="hdr-r">
     <div class="badge" id="badge">אין מלאי</div>
     <button class="ibtn" title="הגדרות" onclick="openSettings()">&#9881;</button>
-    <button class="ibtn" title="טעינת מלאי" onclick="showUpload()">&#8593;</button>
   </div>
 </div>
 
@@ -142,23 +141,7 @@ body { background: var(--bg); color: var(--txt); font-family: var(--sans); -webk
   </div>
 </div>
 
-<div class="scr show" id="scrUpload">
-  <div class="upwrap">
-    <h2>טעינת מלאי</h2>
-    <div id="currentInvStatus"></div>
-    <p>בחר קבצי CSV מיוצאים מחישובית (KITE, WINDSURF, WING, KAYAKS). ניתן לבחור מספר קבצים בבת אחת.</p>
-    <div class="dz" id="dz">
-      <input type="file" id="fileInput" accept=".csv" multiple>
-      <div class="dz-ico">&#128194;</div>
-      <div class="dz-t">בחר קבצי CSV</div>
-      <div class="dz-s">או גרור לכאן</div>
-    </div>
-    <div class="flist" id="fileList"></div>
-    <button class="btn" id="loadBtn" disabled onclick="doLoad()">טען מלאי</button>
-  </div>
-</div>
-
-<div class="scr" id="scrSearch">
+<div class="scr show" id="scrSearch">
   <div class="swrap">
     <div class="srow">
       <input class="si" id="searchInput" type="search"
@@ -452,47 +435,6 @@ function buildEmpty(icon, title, msg) {
     '</div>';
 }
 
-// ── UPLOAD SCREEN (T5) ──
-var pendingFiles = [];
-
-document.getElementById('fileInput').addEventListener('change', function(e) {
-  pendingFiles = Array.from(e.target.files);
-  showPendingFiles();
-});
-
-var dzEl = document.getElementById('dz');
-dzEl.addEventListener('dragover', function(e) { e.preventDefault(); dzEl.classList.add('ov'); });
-dzEl.addEventListener('dragleave', function() { dzEl.classList.remove('ov'); });
-dzEl.addEventListener('drop', function(e) {
-  e.preventDefault(); dzEl.classList.remove('ov');
-  pendingFiles = Array.from(e.dataTransfer.files).filter(function(f) { return f.name.endsWith('.csv'); });
-  showPendingFiles();
-});
-
-function showPendingFiles() {
-  var html = pendingFiles.map(function(f) {
-    return '<div class="fi">' +
-      '<div><div class="fi-n">' + esc(f.name) + '</div>' +
-      '<div class="fi-m">\u05de\u05de\u05ea\u05d9\u05df...</div></div>' +
-      '<div class="fi-s">\u23f3</div></div>';
-  }).join('');
-  document.getElementById('fileList').innerHTML = html;
-  document.getElementById('loadBtn').disabled = pendingFiles.length === 0;
-}
-
-async function doLoad() {
-  // CSV upload disabled in V2 — inventory is loaded from product_index.json
-  showSearch();
-}
-
-function readFileAsText(file) {
-  return new Promise(function(resolve, reject) {
-    var reader = new FileReader();
-    reader.onload  = function(e) { resolve(e.target.result); };
-    reader.onerror = function() { reject(new Error('\u05e9\u05d2\u05d9\u05d0\u05ea \u05e7\u05e8\u05d9\u05d0\u05d4')); };
-    reader.readAsText(file, 'UTF-8');
-  });
-}
 
 // ── SEARCH SCREEN (T7) ──
 document.getElementById('searchInput').addEventListener('keydown', function(e) {
@@ -505,7 +447,7 @@ function fillSearch(text) {
 }
 
 async function doSearch() {
-  var query = document.getElementById('searchInput').value.trim();
+  var query     = document.getElementById('searchInput').value.trim();
   if (!query) return;
 
   var apiKey    = getKey();
@@ -515,7 +457,7 @@ async function doSearch() {
   var searchBtn = document.getElementById('searchBtn');
 
   if (!PRODUCTS.length) {
-    rl.innerHTML = buildEmpty('\ud83d\udce6', '\u05d0\u05d9\u05df \u05de\u05dc\u05d0\u05d9', '\u05d8\u05d5\u05e2\u05df \u05de\u05dc\u05d0\u05d9...');
+    rl.innerHTML = buildEmpty('\ud83d\udce6', '\u05d8\u05d5\u05e2\u05df \u05de\u05dc\u05d0\u05d9...', '\u05d0\u05e0\u05d0 \u05d4\u05de\u05ea\u05df');
     return;
   }
 
@@ -525,6 +467,7 @@ async function doSearch() {
   rl.innerHTML = buildSkeletons(4);
 
   try {
+    // Stage 1: Fuse.js fuzzy
     var candidates = fuzzySearch(query);
 
     if (!candidates.length) {
@@ -534,24 +477,27 @@ async function doSearch() {
       return;
     }
 
-    var results;
+    var products;
 
     if (!apiKey) {
+      // Fallback: show Fuse.js top 20 directly
       nokeyEl.classList.add('show');
-      results = candidates.slice(0, 20).map(function(item) { return { item: item, score: 1, reason: '' }; });
-      stl.textContent = results.length + ' \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea (\u05de\u05d9\u05dc\u05d5\u05ea \u05de\u05e4\u05ea\u05d7)';
+      products = candidates.slice(0, 20);
+      stl.textContent = products.length + ' \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea (\u05de\u05d9\u05dc\u05d5\u05ea \u05de\u05e4\u05ea\u05d7)';
     } else {
-      stl.textContent = candidates.length + ' \u05de\u05d5\u05e2\u05de\u05d3\u05d9\u05dd \u2192 Claude...';
-      results = await claudeSearch(query, candidates, apiKey);
-      stl.textContent = results.length ? results.length + ' \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea' : '';
+      // Stage 2+3: detect sport -> build knowledge -> Claude re-rank
+      var sportFiles    = detectSport(query);
+      var knowledgeText = buildKnowledgePrompt(sportFiles);
+      stl.textContent   = candidates.length + ' \u05de\u05d5\u05e2\u05de\u05d3\u05d9\u05dd \u2192 Claude...';
+      products = await claudeSearch(query, candidates, apiKey, knowledgeText);
+      stl.textContent   = products.length ? products.length + ' \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea' : '';
     }
 
-    if (!results.length) {
+    if (!products.length) {
       rl.innerHTML = buildEmpty('\ud83e\udd37', '\u05d0\u05d9\u05df \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea', '\u05e0\u05e1\u05d4: EVO 10, \u05e8\u05d9\u05d1\u05dc 9, \u05e7\u05d9\u05d0\u05e7, wing foil');
     } else {
-      rl.innerHTML = buildGroupedResults(results);
+      rl.innerHTML = '<div class="rlist">' + products.map(buildCard).join('') + '</div>';
     }
-
   } catch(e) {
     rl.innerHTML = buildEmpty('\u26a0\ufe0f', '\u05e9\u05d2\u05d9\u05d0\u05d4', esc(e.message));
     stl.textContent = '';
@@ -560,45 +506,16 @@ async function doSearch() {
   searchBtn.disabled = false;
 }
 
-// ── NAVIGATION + INIT (T4, T8) ──
-function showUpload() {
-  document.getElementById('scrUpload').classList.add('show');
-  document.getElementById('scrSearch').classList.remove('show');
-  renderCurrentInvStatus();
-}
-
-function renderCurrentInvStatus() {
-  var el = document.getElementById('currentInvStatus');
-  if (!PRODUCTS.length) { el.innerHTML = ''; return; }
-  var inStock = PRODUCTS.filter(function(p) {
-    return p.variants && p.variants.some(function(v) { return v.stock === 'in_stock'; });
-  }).length;
-  var age = '';
-  if (PRODUCTS_UPDATED) {
-    var days = Math.floor((Date.now() - new Date(PRODUCTS_UPDATED).getTime()) / 86400000);
-    age = days === 0 ? 'עודכן היום' : 'עודכן לפני ' + days + ' ימים';
-  }
-  el.innerHTML = '<div class="inv-status">' +
-    '<div class="inv-status-info">' +
-      '<strong>' + PRODUCTS.length + ' פריטים במלאי</strong>' +
-      '<small>' + inStock + ' זמינים · ' + esc(age) + '</small>' +
-    '</div>' +
-    '<div class="inv-status-go" onclick="showSearch()">חזור לחיפוש ←</div>' +
-  '</div>';
-}
-
+// ── NAVIGATION + INIT ──
 function showSearch() {
-  document.getElementById('scrUpload').classList.remove('show');
   document.getElementById('scrSearch').classList.add('show');
   document.getElementById('searchInput').focus();
 }
 
 (function init() {
-  loadProductIndex().then(function() {
-    showSearch();
-  }).catch(function() {
-    showUpload();
-  });
+  showSearch();
+  loadProductIndex().catch(function() {});
+  loadKnowledge();
 })();
 </script>
 </body>
