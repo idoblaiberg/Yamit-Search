@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/opt/homebrew/bin/python3
 import csv, json, re, sys
 from datetime import datetime, timezone
 from pathlib import Path
