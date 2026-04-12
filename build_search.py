@@ -13,6 +13,28 @@ C_PRICE, C_SALE, C_STOCK, C_URL = 6, 7, 8, 9
 
 AZL = '\u05d0\u05d6\u05dc'  # Hebrew "sold out"
 
+# Hebrew anatomy/equipment terms → English equivalents added to search_doc
+# Checked against product names in yamit_products.csv
+TERM_SYNONYMS = [
+    ('\u05ea\u05d5\u05e8\u05df',    'mast'),           # תורן
+    ('\u05de\u05e0\u05d5\u05e8',    'boom'),           # מנור
+    ('\u05d2\u05d5\u05e3',          'fuselage'),       # גוף
+    ('\u05e4\u05d9\u05d5\u05d6',    'fuselage fuse'),  # פיוז
+    ('\u05db\u05e0\u05e3',          'wing fin'),       # כנף
+    ('\u05e1\u05d8\u05d1\u05d9\u05dc\u05d9\u05d6\u05e8', 'stabilizer'),  # סטביליזר
+    ('\u05d8\u05e8\u05e4\u05d6',    'harness'),        # טרפז
+    ('\u05de\u05e4\u05e8\u05e9',    'sail'),           # מפרש
+    ('\u05d2\u05dc\u05e9\u05df',    'board'),          # גלשן
+    ('\u05d7\u05d5\u05e4\u05d4',    'kite canopy'),    # חופה
+    ('\u05dc\u05d9\u05e9',          'leash'),          # ליש
+    ('\u05e1\u05e0\u05e4\u05d9\u05e8', 'fin'),         # סנפיר
+    ('\u05de\u05e9\u05d5\u05d8',    'paddle'),         # משוט
+    ('\u05d7\u05d2\u05d5\u05e8\u05d4', 'harness belt'), # חגורה
+    ('\u05d9\u05e9\u05d9\u05d1\u05d4', 'seat harness'), # ישיבה
+    ('\u05d1\u05d9\u05d2\u05d5\u05d3', 'wetsuit apparel clothing'), # ביגוד
+    ('\u05d7\u05dc\u05d9\u05e4\u05d4', 'wetsuit suit'),  # חליפה
+]
+
 SPORT_SYNONYMS = {
     '\u05d2\u05dc\u05d9\u05e9\u05ea \u05e1\u05d0\u05e4': ['fanatic', 'quickblade', 'qb'],
     '\u05e7\u05d9\u05d9\u05d8 \u05e1\u05e8\u05e4\u05d9\u05e0\u05d2': ['duotone', 'ion'],
@@ -39,6 +61,10 @@ def build_search_doc(name, sport, cat, sku, variants):
     for sport_key, synonyms in SPORT_SYNONYMS.items():
         if sport_key in sport:
             parts += synonyms
+    combined_words = set(re.split(r'[\s/\-\|]+', name + ' ' + cat))
+    for heb, eng in TERM_SYNONYMS:
+        if heb in combined_words:
+            parts.append(eng)
     return ' '.join(p for p in parts if p)
 
 if not CSV_FILE.exists():
